@@ -12,7 +12,7 @@ import multiprocessing as mp
 
 
 ## Have a separate class for the Rates
-## so we don't have to pickle all of MoranStates
+## so we don't have to pickle all of MoranStatesAugmented
 ## when doing multiprocessing
 ## (saves memory and communication time with worker processes)
 class MoranRates(object):
@@ -274,7 +274,7 @@ def single_ordered_log_likelihood(n, unordered_likelihoods):
         ordered_ll[config] = math.log(likelihood) - comb
     return ordered_ll
    
-class MoranStates(AbstractMoranStates):
+class MoranStatesAugmented(AbstractMoranStates):
     '''
     maintains a representation of the states(possible configs) of the 2 locus Moran model
     '''
@@ -285,7 +285,7 @@ class MoranStates(AbstractMoranStates):
         #os.system('taskset -p %s >&2' %os.getpid())
        
         start = time.time()
-        super(MoranStates, self).__init__(n)
+        super(MoranStatesAugmented, self).__init__(n)
         self.exact = True
                        
         self.build_all_configs(n, exact=True)

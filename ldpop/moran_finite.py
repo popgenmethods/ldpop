@@ -4,14 +4,14 @@ Created on Jan 23, 2015
 @author: jkamm
 '''
 from compute_stationary import stationary
-from moran_model import AbstractMoranStates, makeFrozen, c_haps, makeAllConfigs
+from moran_augmented import AbstractMoranStates, makeFrozen, c_haps, makeAllConfigs
 
 import logging, time, numpy, scipy
 from scipy import sparse
 from collections import Counter
 from functools import partial
                 
-class MoranStatesDK(AbstractMoranStates):
+class MoranStatesFinite(AbstractMoranStates):
     '''
     maintains a representation of the states of the 2 locus Moran model
     '''
@@ -21,7 +21,7 @@ class MoranStatesDK(AbstractMoranStates):
         Constructor
         '''
         start = time.time()
-        super(MoranStatesDK, self).__init__(n)
+        super(MoranStatesFinite, self).__init__(n)
         self.exact = False        
         
         # make all haplotypes
