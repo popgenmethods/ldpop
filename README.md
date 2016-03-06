@@ -23,6 +23,7 @@ pip uninstall ldpop
 ```
 bin/ldtable.py --help
 ```
+Also, see the [examples](examples/)
 
 ## Authors
 
