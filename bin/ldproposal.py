@@ -3,6 +3,9 @@
 from ldpop import ISProposal, rhos_from_string
 import logging, argparse
 
+## TODO: this needs to be cleaned up!
+## make the command line args similar to ldtable.py
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--numHaps", type=int)
