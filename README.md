@@ -51,7 +51,7 @@ In roughly the order of importance
   * Can use virtualenv, or a virtual machine  
 * Make ISProposal a class (a la LookupTable)
   * currently, it is a function returning a str
-  * define ISProposal.__str__ so that `print ISProposal(...)` still works
+  * define `ISProposal.__str__` so that `print ISProposal(...)` still works
 * Write docstrings for everything imported into [ldpop/__init__.py](ldpop/__init__.py)
   * LookupTable docstring already written
 * Write better tests in test/
