@@ -3,11 +3,9 @@
 from ldpop import ISProposal, rhos_from_string
 import logging, argparse
 
-## TODO: this needs to be cleaned up!
-## make the command line args similar to ldtable.py
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Print a table of (approximate) likelihoods through time, used for importance sampling")
+    parser = argparse.ArgumentParser(description="Print a table of (approximate) likelihoods through time, use in conjunction with bin/ImportanceSampler.jar")
     parser.add_argument("-n", type = int, metavar = "N", required = True, help = "sample size (table will contain configs with 2N haplotypes)" )
     parser.add_argument("-th", type=float, metavar = "theta", required = True, help = "twice the mutation rate")
     parser.add_argument("-rh", type=str, metavar = "rho", required = True, help = "twice the recomb rate.  Alternatively, one can input num_rho,max_rho to make a grid with num_rh uniformly spaced points from 0 to max_rh, inclusive. (((Alternatively, to create a non-uniform grid, use '-rh r0,step0,r1,step1,r2,...rK'. This creates a grid {r0,r0+step0,r0+2*step0,...,r1,r1+step1,...,rK} similar to ldhelmet. Note that non-uniform grid is incompatible with vanilla ldhat.)))")

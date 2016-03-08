@@ -29,11 +29,13 @@ if __name__ == "__main__":
     popSizes, times = args.s, args.t
     assert (popSizes is None) == (times is None)
     if popSizes is None:
-        popSizes = [1]
+        popSizes = [1.]
         times = []
     else:
         popSizes = map(float, popSizes.split(","))
         times = map(float, times.split(","))
+
+    assert len(popSizes) == len(times)+1        
     
     print LookupTable(args.n, args.th, rhos, popSizes, times, exact, numCores)
 
