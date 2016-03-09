@@ -150,23 +150,37 @@ class AbstractMoranStates(object):
         self.build_config_array()
 
     def build_config_array(self):
+        """
+        Create self.config_array, defined by:
+        self.config_array[i, a, b] = the count of haplotype (a,b) in the i-th config
+        """
         idxs, vals = zip(*[zip(*config) for config in self.all_configs])
         idxs = numpy.array(idxs) # axis0=config, axis1=hap, axis2=locus
         vals = numpy.array(vals) # axis0=config, axis1=hap
+
+        # now label each entry by the index of its config
         
-        idxs = idxs.T
+        idxs = idxs.T # move the config axis at the end, the locus axis to the front
+        # broadcast up the indices [0,1,2,3,...,max_config] to have same dimension as idxs
+        # idxs becomes the pair (config_idxs, idxs)
         idxs = numpy.broadcast_arrays(numpy.arange(len(self.all_configs)),
                                       idxs)
-        idxs = numpy.vstack(idxs)[1:,:,:]
+        # now stack the config_idxs onto the idxs, along the locus axis
+        idxs = numpy.vstack(idxs)[1:,:,:] # take [1:,...] because we copied the config_idx twice (for each locus)
+        # now move config index to the front, locus index to the back
         idxs = idxs.T
-        assert idxs.shape == (len(self.all_configs), 8, 3)
+        assert idxs.shape == (len(self.all_configs), 8, 3) # axis0=config, axis1=hap, axis2=configIdx/locus
 
+        # flatten the counts
         vals = numpy.reshape(vals,-1,order='C')
+        # flatten the configs (but keep the index/locus axis
         idxs = numpy.reshape(idxs,(-1,3),order='C')
-        
+
+        # now create the config array, and assign all the counts to it
         self.config_array = numpy.zeros((len(self.all_configs), 3, 3), dtype=int)
         self.config_array[idxs[:,0],idxs[:,1],idxs[:,2]] = vals
 
+        # create dictionary mapping their hash values back to their index
         hash_vals = self.hash_config_array(self.config_array)
         assert len(set(hash_vals)) == len(hash_vals) # should be all unique
         self.hash_to_allIdx = {k:v for v,k in enumerate(hash_vals)}
