@@ -37,15 +37,9 @@ When ldpop is publicly released, it will be free software under conditions of GN
 
 # TODO
 
-For Jeff & Jeff: `bin/ldtable.py` corresponds to `build_ldhat_table.py` from before. `bin/ldproposal.py` corresponds to `build_timed_grid_table.py` from before. The major remaining task is to add a callable to do the importance sampling -- I am thinking a jar file like `bin/ImportanceSampler.jar`
-
-Tasks, in roughly the order of importance (edited by Jeff S. 3/8/16):
+Tasks, in roughly the order of importance (edited by Jeff S. 3/9/16):
 * Test with ldhat, ldhelmet  
-* Test ldpop installation for clean install
-  * Can use virtualenv, or a virtual machine  
-* Make ISProposal a class (a la LookupTable)
-  * currently, it is a function returning a str
-  * define `ISProposal.__str__` so that `print ISProposal(...)` still works
 * Write docstrings for everything imported into [ldpop/\_\_init\_\_.py](ldpop/__init__.py)
   * LookupTable docstring already written
+  * ISProposal docstring already written
 * Write better tests in test/

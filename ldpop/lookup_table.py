@@ -11,7 +11,6 @@ from moran_finite import MoranStatesFinite
 from compute_stationary import stationary
 
 from multiprocessing import Pool
-import cPickle as pickle
 import logging, time, pandas, numpy
 
 

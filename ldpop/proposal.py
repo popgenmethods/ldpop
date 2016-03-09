@@ -1,69 +1,107 @@
-from lookup_table import epochTimesToIntervalLengths, rhos_from_string, rhos_to_string
+from lookup_table import epochTimesToIntervalLengths, rhos_to_string
 from compute_likelihoods import folded_likelihoods
 from moran_finite import MoranStatesFinite
 from moran_augmented import MoranRates
 
 from multiprocessing import Pool
-import logging, math, sys
-from cStringIO import StringIO
+import math,pandas,logging,time
 
 haps = []
 for a in range(2):
     for b in range(2):
         haps.append((a,b))
 
-## TODO: change ISProposal to a class usable from python, similar to LookupTable. subclass of pandas.Panel?
-def ISProposal(n, theta, rhos, pop_sizes, times, numTimePointsPerEpoch, processes):
-    f = StringIO()
-    epochLengths = epochTimesToIntervalLengths(times)    
-    # Allows us to create a table for only one config instead of all of the configs
-    num_haps = 2 * n
-    f.write("\t".join(["numHaps"] + [str(n)]) + "\n")
-    # All possible configs
-    
-    states = MoranStatesFinite(num_haps)
-    
-    # Rate matrices for each epoch. Not sure if the overhead is actually worth this but whatever
-    #demoRatesList = [states.getDemoRates(theta, popSize) for popSize in popSizes]
-    
-    # Tell the importance sampler what parameters you used to compute stuff. Parameter header.
-    f.write("\t".join(["theta"] + [str(theta)]) + "\n")
-    f.write("\t".join(["popSizes"] + [",".join(map(str,pop_sizes))]) + "\n")
-    f.write("\t".join(["epochTimes"] + [",".join(map(str,times))]) + "\n")
-    f.write("\t".join(["rhos"] + [rhos_to_string(rhos)]) + "\n")
-    f.write("%\n") # Ending delimiter of parameters
+class ISProposal(pandas.Panel):
+    """
+    Tensor of 2-locus likelihoods, with axes corresponding to recombination rates, times, and configs. 
+    This is to be used as a proposal distribution with ImportanceSampler.jar Construct with
+    ldproposal = ISProposal(n, theta, rhos, pop_sizes, times, grid_points, [processes])
+    (optional arguments in square bracket [])
 
-    moranRates = MoranRates(states)
-    
-    executor = Pool(processes)
-    
-    likelihoodDictList = map(states.ordered_log_likelihoods,
-                             executor.map(ordered_wrapper, [(moranRates, rho, theta, pop_sizes, epochLengths, numTimePointsPerEpoch) for rho in rhos]))
-    
-    executor.close()
-    executor.join()
-    
-    # Iterate over each config x timepoints table for a given rho, then print.
-    for rho, likelihoodDict in zip(rhos,likelihoodDictList):   
-        timeList = likelihoodDict.keys()
-        timeList.sort()
+    ISProposal is a subclass of pandas.Panel, with the index axis corresponding to rho, rows corresponding to configs and columns corresponding to time points. So
+       ldproposal.ix[5.0,'13 0 0 1', 1.0]
+    returns the approximate likelihood of sample config '13 0 0 1' with rho=5.0 at time 1.0.
+
+    Printing
+    --------
+    str(ldproposal) returns a string in the format expected by ImportanceSampler.jar
+    to print the table to STDOUT in this format, do
+        print ldproposal
+
+    Attributes
+    ----------
+    ldproposal.num_haps = number of haplotypes in each config in the table (2*n in the constructor)
+    ldproposal.theta = 2*mutation rate
+    ldproposal.pop_sizes = [size0,size1,...,sizeD] = coalescent scaled population sizes
+         size0 = present size, sizeD = ancient size
+    ldproposal.times = [t1,...,tD] = the times of size changes, going backwards from present
+         must be increasing positive reals
+    The data can be accessed using the methods of pandas.Panel, e.g. ldproposal.ix[5.0,'13 0 0 1', 1.0] as above
+    Parallelization: use
+        ISProposal(...,processes)
+    to specify the number of parallel processes to use.
+    """
+    def __init__(self, n, theta, rhos, pop_sizes, times, numTimePointsPerEpoch, processes=1):
+        start = time.time()
+        epochLengths = epochTimesToIntervalLengths(times)    
+        # All possible configs
+        states = MoranStatesFinite(2*n)
         
-        f.write("\t".join(["rho"] + [str(rho)]) + "\n")
-        f.write("\t".join(["config"] + [str(t) for t in timeList]) + "\n")
+        # Rate matrices for each epoch. Not sure if the overhead is actually worth this but whatever
+        #demoRatesList = [states.getDemoRates(theta, popSize) for popSize in popSizes]
         
-        for config in sorted(likelihoodDict[0.0].keys()):
-            configDict = dict(config)
-            toPrint = []
-            configString = " ".join([str(configDict[hap]) for hap in haps])
-            toPrint.append(configString)
-            toPrint.append(":")
-            toPrint = toPrint + [str(math.exp(likelihoodDict[time][config])) for time in timeList]
-            f.write("\t".join(toPrint) + "\n")
-        f.write("$" + "\n")
+        # Tell the importance sampler what parameters you used to compute stuff. Parameter header.
+        
     
-    #f.close()
-    return f.getvalue()
+        moranRates = MoranRates(states)
+        
+        executor = Pool(processes)
+        
+        likelihoodDictList = map(states.ordered_log_likelihoods,
+                                 executor.map(ordered_wrapper, [(moranRates, rho, theta, pop_sizes, epochLengths, numTimePointsPerEpoch) for rho in rhos]))
+        executor.close()
+        executor.join()
+                                 
+        data = {}
+        for rho, likelihoodDict in zip(rhos,likelihoodDictList):
+            timeList = likelihoodDict.keys()
+            timeList.sort()
+            index, rows = [],[]
+            for config in sorted(likelihoodDict[0.0].keys()):
+                config_dict = dict(config)
+                index += [" ".join([str(config_dict[hap]) for hap in haps])]
+                rows += [[math.exp(likelihoodDict[disc_time][config]) for disc_time in timeList]]
+            data[rho] = pandas.DataFrame(rows, index=index, columns=timeList)
+        
+        super(ISProposal, self).__init__(data)
+        end = time.time()
+        logging.info("Computed lookup table in %f seconds " % (end-start))
+        self.num_haps = 2*n
+        self.theta = theta
+        self.pop_sizes = pop_sizes
+        self.times = times
     
+    
+    #TODO: fix w.r.t. dealing with pandas stuff above
+    def __str__(self):
+        ret = []
+        #header
+        ret += [["numHaps", int(self.num_haps/2)]]
+        ret += [["theta", self.theta]]
+        ret += [["popSizes", ",".join(map(str,self.pop_sizes))]]
+        ret += [["epochTimes", ",".join(map(str,self.times))]]
+        ret += [["rhos", rhos_to_string(self.keys())]]
+        ret += [["%"]]  #delimiter
+        # Iterate over each config x timepoints table for a given rho, then print.
+        for rho, data_frame in self.iteritems():
+            data_frame = self[rho]
+            ret += [["rho", rho]]
+            for (config, row) in data_frame.iterrows():
+                ret += [[config,":"] + list(row)]
+            ret += [["$"]]  #delimiter
+
+        return "\n".join([" ".join(map(str,x)) for x in ret])
+        
 
         
 def ordered_wrapper(args_list):
