@@ -96,6 +96,7 @@ class ISProposal(pandas.Panel):
         for rho, data_frame in self.iteritems():
             data_frame = self[rho]
             ret += [["rho", rho]]
+            ret += [["config"," ".join(map(str,data_frame.keys()))]]
             for (config, row) in data_frame.iterrows():
                 ret += [[config,":"] + list(row)]
             ret += [["$"]]  #delimiter
