@@ -70,22 +70,22 @@ def makeAllConfigs(hapList, n):
     # make all configs
     # represent a config as a dict
     tmpConfigList = [{}]
-    for hap in hapList:
+    for hapIdx,hap in enumerate(hapList):
         newConfigList = []
         for config in tmpConfigList:
             numHaps = sum([v for k,v in config.items()])
             assert numHaps <= n
-            for i in xrange(n - numHaps + 1):
+            if hapIdx == len(hapList)-1:
+                next_count = [n-numHaps]
+            else:
+                next_count = xrange(n - numHaps + 1)
+            for i in next_count:
                 newConfig = dict(config)
                 newConfig[hap] = i
                 newConfigList.append(newConfig)
         tmpConfigList = newConfigList
-        
-    configList = [[] for i in xrange(n+1)]
-    for config in tmpConfigList:
-        numHaps = sum([v for k,v in config.items()])
-        configList[numHaps].append(config)
-    return configList
+
+    return tmpConfigList
 
 def one_locus_probs(popSize, theta, n):
     coalRate = 1. / popSize
@@ -108,59 +108,34 @@ class AbstractMoranStates(object):
         self._stationary = {}
 
     def build_all_configs(self, n, exact):
-        # now make a config list. make all the configs frozensets so they are hashable
-        aConfigs = makeAllConfigs(a_haps, n)
-        bConfigs = makeAllConfigs(b_haps, n)
-        cConfigs = makeAllConfigs(c_haps, n)
-        
-        all_configs = []
-
+        """
+        Create self.config_array, defined by:
+        self.config_array[i, a, b] = the count of haplotype (a,b) in the i-th config
+        """
         if exact:
             cList = range(n+1)
         else:
             cList = [n]
+
+        aConfigs = {n-c: makeAllConfigs(a_haps,n-c) for c in cList}
+        bConfigs = {n-c: makeAllConfigs(b_haps,n-c) for c in cList}        
+        cConfigs = {c: makeAllConfigs(c_haps, c) for c in cList}
         
+        all_configs = []
+       
         for numC in cList:
             for aConf in aConfigs[n - numC]:
                 for bConf in bConfigs[n - numC]:
                     for cConf in cConfigs[numC]:
                         conf = {}
                         conf.update(aConf); conf.update(bConf); conf.update(cConf)
-                        
-                        assert len(conf) == len(all_haps)
-                        conf = tuple(conf.items())
-                        
+                                                
                         all_configs.append(conf)
 
-        """
-        Create self.config_array, defined by:
-        self.config_array[i, a, b] = the count of haplotype (a,b) in the i-th config
-        """
-        idxs, vals = zip(*[zip(*config) for config in all_configs])
-        idxs = numpy.array(idxs) # axis0=config, axis1=hap, axis2=locus
-        vals = numpy.array(vals) # axis0=config, axis1=hap
-
-        # now label each entry by the index of its config
-        
-        idxs = idxs.T # move the config axis at the end, the locus axis to the front
-        # broadcast up the indices [0,1,2,3,...,max_config] to have same dimension as idxs
-        # idxs becomes the pair (config_idxs, idxs)
-        idxs = numpy.broadcast_arrays(numpy.arange(len(all_configs)),
-                                      idxs)
-        # now stack the config_idxs onto the idxs, along the locus axis
-        idxs = numpy.vstack(idxs)[1:,:,:] # take [1:,...] because we copied the config_idx twice (for each locus)
-        # now move config index to the front, locus index to the back
-        idxs = idxs.T
-        assert idxs.shape == (len(all_configs), 8, 3) # axis0=config, axis1=hap, axis2=configIdx/locus
-
-        # flatten the counts
-        vals = numpy.reshape(vals,-1,order='C')
-        # flatten the configs (but keep the index/locus axis
-        idxs = numpy.reshape(idxs,(-1,3),order='C')
-
-        # now create the config array, and assign all the counts to it
         self.config_array = numpy.zeros((len(all_configs), 3, 3), dtype=int)
-        self.config_array[idxs[:,0],idxs[:,1],idxs[:,2]] = vals
+        for idx,conf in enumerate(all_configs):
+            for (i,j),count in conf.iteritems():
+                self.config_array[idx,i,j] = count
 
         # create dictionary mapping their hash values back to their index
         hash_vals = self.hash_config_array(self.config_array)
@@ -186,7 +161,6 @@ class AbstractMoranStates(object):
         
         n = self.n
         leftOnes, rightOnes, bothOnes = self.numOnes(0), self.numOnes(1), self.hapCount((1,1))
-#             joint = one_loc_probs[leftOnes] * one_loc_probs[rightOnes]
         joint = one_loc_probs[leftOnes] * one_loc_probs[rightOnes]
         if self.exact:
             joint[self.numC > 0] = 0
@@ -259,9 +233,7 @@ class MoranStatesAugmented(AbstractMoranStates):
     def __init__(self, n):
         '''
         Constructor
-        '''
-        #os.system('taskset -p %s >&2' %os.getpid())
-       
+        '''      
         start = time.time()
         super(MoranStatesAugmented, self).__init__(n)
         self.exact = True
@@ -278,13 +250,10 @@ class MoranStatesAugmented(AbstractMoranStates):
         logging.info("Constructed recombination rate matrix in %f seconds" % (time.time() - start))
 
         start = time.time()        
-        #self.unscaled_mut_rates = self.build_rates(config_mut_rates)
         self.unscaled_mut_rates = build_mut_rates(self)
         logging.info("Constructed mut rate matrix in %f seconds" % (time.time() - start))
 
         start = time.time()
-        #self.unscaled_coal_rates = self.build_rates(config_copy_rates) + self.build_rates(config_coal_rates)
-        #self.unscaled_coal_rates = self.build_rates(config_copy_rates) + build_cross_coal_rates(self)
         self.unscaled_coal_rates = build_copy_rates(self) + build_cross_coal_rates(self)                
         logging.info("Constructed coalescent/copying rate matrix in %f seconds" % (time.time() - start))
                
@@ -408,10 +377,6 @@ def build_cross_coal_rates(states):
 
     confs = states.folded_config_array
     for hap in c_haps:
-        # two lineages coalesce into hap        
-        #leftHap = (hap[0],-1)
-        #rightHap = (-1,hap[1])
-
         otherConfs = numpy.array(confs)
         
         rates = otherConfs[:,hap[0],-1] * otherConfs[:,-1,hap[1]]
