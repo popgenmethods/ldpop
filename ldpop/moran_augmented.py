@@ -121,7 +121,7 @@ class AbstractMoranStates(object):
         self.all_configs = []
         self.all_configs_idx = {}
         self.full_configs_all = []
-        self.numC = []
+        #self.numC = []
 
         if exact:
             cList = range(n+1)
@@ -140,44 +140,50 @@ class AbstractMoranStates(object):
                         
                         self.all_configs_idx[conf] = len(self.all_configs)
                         self.all_configs.append(conf)
-                        self.numC.append(numC)
+
                         if numC == n:
                             self.full_configs_all.append(conf)      
-        
-        self.numC = numpy.array(self.numC)
-            
+                    
         assert len(self.all_configs) == len(self.all_configs_idx)
         assert len(self.all_configs_idx) > 0
 
-    def numOnes(self, loc):
-        ret = []
-        for config in self.folded_configs:
-            curr = 0
-            for hap,count in config:
-                if hap[loc] == 1:
-                    curr += count
-            ret.append(curr)
-        return numpy.array(ret)       
+        self.build_config_array()
 
+    def build_config_array(self):
+        idxs, vals = zip(*[zip(*config) for config in self.all_configs])
+        idxs = numpy.array(idxs) # axis0=config, axis1=hap, axis2=locus
+        vals = numpy.array(vals) # axis0=config, axis1=hap
         
-    # def numOnes(self, loc):
-    #     ret = []
-    #     for config in self.all_configs:
-    #         curr = 0
-    #         for hap,count in config:
-    #             if hap[loc] == 1:
-    #                 curr += count
-    #         ret.append(curr)
-    #     return numpy.array(ret)
-    
+        idxs = idxs.T
+        idxs = numpy.broadcast_arrays(numpy.arange(len(self.all_configs)),
+                                      idxs)
+        idxs = numpy.vstack(idxs)[1:,:,:]
+        idxs = idxs.T
+        assert idxs.shape == (len(self.all_configs), 8, 3)
+
+        vals = numpy.reshape(vals,-1,order='C')
+        idxs = numpy.reshape(idxs,(-1,3),order='C')
+        
+        self.config_array = numpy.zeros((len(self.all_configs), 3, 3), dtype=int)
+        self.config_array[idxs[:,0],idxs[:,1],idxs[:,2]] = vals
+
+        hash_vals = self.hash_config_array(self.config_array)
+        assert len(set(hash_vals)) == len(hash_vals) # should be all unique
+        self.hash_to_allIdx = {k:v for v,k in enumerate(hash_vals)}
+
+    def hash_config_array(self, conf_arr):
+        base = self.n+1
+        hash_vals = conf_arr[:,0,0] + base * conf_arr[:,0,1] + (base**2) * (conf_arr[:,1,0])
+        if self.exact:
+            hash_vals += (base**3)*(conf_arr[:,1,1]) + (base**4)*(conf_arr[:,0,-1]) + (base**5)*(conf_arr[:,-1,0])
+        return hash_vals
+        
+    def numOnes(self, loc):
+        return self.folded_config_array.sum(axis=1+(1-loc))[:,1]
+        
     def hapCount(self, hap):
-        ret = []
-        #for config in self.all_configs:
-        for config in self.folded_configs:
-            config = dict(config)
-            ret.append(config[hap])
-        return numpy.array(ret)
-            
+        return numpy.array(self.folded_config_array[:,hap[0],hap[1]])
+    
     def getUnlinkedStationary(self, popSize, theta):
         one_loc_probs = one_locus_probs(popSize=popSize, theta=theta, n=self.n)
         assertValidProbs(one_loc_probs)
@@ -195,28 +201,26 @@ class AbstractMoranStates(object):
 
         assertValidProbs(joint)  
         return joint
-
-    def get_folded_idx(self, state):
-        return self.allIdx_to_foldedIdx[self.all_configs_idx[state]]
-    
+   
     def build_symmetries(self):
         start = time.time()
 
         # the index of the folded version in all_configs
-        folded_list = map(get_folded_config, self.all_configs)
-        folded_list = [self.all_configs_idx[folded_conf] for folded_conf in folded_list]
-
+        folded_list = get_folded_config_idxs(self)
+        
         # foldedIdx = the index in folded_configs, allIdx = the index in all_configs
-        foldedIdx_to_allIdx = list(set(folded_list))
-        allIdx_to_foldedIdx = {v:k for k,v in enumerate(foldedIdx_to_allIdx)}
+        foldedIdx_to_allIdx = numpy.array(list(set(folded_list)))
         
-        self.allIdx_to_foldedIdx = [allIdx_to_foldedIdx[x] for x in folded_list]
-        self.folded_configs = [self.all_configs[foldedIdx_to_allIdx[x]] for x in range(len(foldedIdx_to_allIdx))]
-        self.numC = numpy.array([self.numC[foldedIdx_to_allIdx[i]] for i in range(len(self.folded_configs))],
-                                dtype=int)
+        allIdx_to_foldedIdx = {v:k for k,v in enumerate(foldedIdx_to_allIdx)}       
+        allIdx_to_foldedIdx = [allIdx_to_foldedIdx[x] for x in folded_list]
+
+        self.hash_to_foldedIdx = {k: allIdx_to_foldedIdx[v] for k,v in self.hash_to_allIdx.iteritems()}
+        self.folded_config_array = self.config_array[foldedIdx_to_allIdx,:,:]        
+              
+        self.numC = self.folded_config_array[:,0,0] + self.folded_config_array[:,0,1] + self.folded_config_array[:,1,0] + self.folded_config_array[:,1,1]
         
-        symm_mat = sparse.dok_matrix((len(self.allIdx_to_foldedIdx), len(self.folded_configs)))
-        symm_mat.update(dict(zip(enumerate(self.allIdx_to_foldedIdx), [1]*len(folded_list))))
+        symm_mat = sparse.dok_matrix((len(allIdx_to_foldedIdx), self.folded_config_array.shape[0]))
+        symm_mat.update(dict(zip(enumerate(allIdx_to_foldedIdx), [1]*len(folded_list))))
         symm_mat = symm_mat.tocsc()
         
         antisymm_mat = symm_mat.transpose().tocsr(copy=True)
@@ -229,21 +233,6 @@ class AbstractMoranStates(object):
         self.antisymmetries = antisymm_mat.tocsr()
         
         logging.info("%f seconds to build symmetry matrices" % (time.time() - start))
-
-    def build_rates(self, rate_fun):
-        rates = {}
-        for rate in map(rate_fun, self.folded_configs):
-            rates.update(rate)
-
-        folded_rates = Counter()
-        for (i,j),v in rates.iteritems():
-            folded_rates[self.get_folded_idx(i), self.get_folded_idx(j)] += v
-
-        ret = sparse.dok_matrix((len(self.folded_configs), len(self.folded_configs)))
-        ret.update(folded_rates)
-
-        ret = ret.tocsr() - sparse.diags(numpy.array(ret.sum(axis=1)).T, offsets=[0], format="csr")
-        return ret.tocsr()
 
     def unfold_likelihoods(self, liks):
         try:
@@ -295,89 +284,100 @@ class MoranStatesAugmented(AbstractMoranStates):
 
         self.build_symmetries()
         
-        #self.unscaled_recom_rates = get_recom_rates(self)
         start = time.time()        
-        self.unscaled_recom_rates = self.build_rates(config_recom_rates)
+        self.unscaled_recom_rates = build_recom_rates(self)
         logging.info("Constructed recombination rate matrix in %f seconds" % (time.time() - start))
 
         start = time.time()        
-        self.unscaled_mut_rates = self.build_rates(config_mut_rates)
+        #self.unscaled_mut_rates = self.build_rates(config_mut_rates)
+        self.unscaled_mut_rates = build_mut_rates(self)
         logging.info("Constructed mut rate matrix in %f seconds" % (time.time() - start))
 
         start = time.time()
-        self.unscaled_coal_rates = self.build_rates(config_copy_rates) + self.build_rates(config_coal_rates)
+        #self.unscaled_coal_rates = self.build_rates(config_copy_rates) + self.build_rates(config_coal_rates)
+        #self.unscaled_coal_rates = self.build_rates(config_copy_rates) + build_cross_coal_rates(self)
+        self.unscaled_coal_rates = build_copy_rates(self) + build_cross_coal_rates(self)                
         logging.info("Constructed coalescent/copying rate matrix in %f seconds" % (time.time() - start))
                
 
-def get_folded_config(state):
-    arr = config2array(state)
-    symm_arrs = [arr, arr[::-1,:], arr[:,::-1], arr[::-1,::-1]]
-    symm_arrs += [a.T for a in symm_arrs]
-    symm_dicts = map(array2dict, symm_arrs)
-    return makeFrozen(min(symm_dicts))
+def get_folded_config_idxs(states):
+    arr = states.config_array
+    # move the missing allele in between alleles 0,1
+    arr = arr[:,(0,-1,1),:][:,:,(0,-1,1)]
 
+    # relabel alleles 0,1 (4 ways to do this)
+    symm_arrs = [arr, arr[:,::-1,:], arr[:,:,::-1], arr[:,::-1,::-1]]
+    # swap the 2 loci
+    symm_arrs += [numpy.transpose(a, axes=(0,2,1)) for a in symm_arrs]
 
-def config_recom_rates(state):
-    ret = Counter()
-    for hap,numHap in state:
-        if numHap == 0 or hap[0] == -1 or hap[1] == -1:
-            continue
+    # swap back allele 1 with missing allele
+    symm_arrs = [a[:,(0,-1,1),:][:,:,(0,-1,1)] for a in symm_arrs]
+    
+    # get hash val for each (folded) config
+    hash_vals = numpy.vstack(map(states.hash_config_array, symm_arrs))
+    # get the smallest hash val among all the folds
+    hash_vals = numpy.amin(hash_vals, axis=0)
+    assert len(hash_vals) == arr.shape[0]
 
-        leftHap = (hap[0],-1)
-        rightHap = (-1,hap[1])
+    # return the corresponding indices
+    return [states.hash_to_allIdx[h] for h in hash_vals]
+        
 
-        # hap recombine
-        otherState = dict(state)
-        rate = numHap
+def build_recom_rates(states):
+    assert states.exact
+    
+    ret = sparse.csr_matrix(tuple([states.folded_config_array.shape[0]]*2))    
+    confs = states.folded_config_array
 
-        otherState[hap] -= 1
-        otherState[leftHap] += 1
-        otherState[rightHap] += 1                        
+    for hap in c_haps:
+        rates = confs[:,hap[0],hap[1]]
+        
+        otherConfs = numpy.array(confs)
+        otherConfs[:,hap[0],hap[1]] -= 1
+        otherConfs[:,hap[0],-1] += 1
+        otherConfs[:,-1,hap[1]] += 1
 
-        # make it hashable
-        otherState = makeFrozen(otherState)
+        ret = ret + get_rates(states, otherConfs, rates)
 
-        ret[state, otherState] += rate
-        #ret[state, state] -= rate
-    return dict(ret)
+    return subtract_rowsum_on_diag(ret)
 
-def config_mut_rates(state):
-    fullRates = Counter()
-    for hap, numHap in state:
-        # hap mutates to something else
-        if numHap == 0:
-            continue
-        rate = numHap
+def build_mut_rates(states):
+    ret = sparse.csr_matrix(tuple([states.folded_config_array.shape[0]]*2))    
+    confs = states.folded_config_array
+
+    if states.exact:
+        hapList = all_haps
+    else:
+        hapList = c_haps
+    
+    for hap in hapList:
+        rates = confs[:,hap[0],hap[1]]
         for loc in xrange(2):
             if hap[loc] == -1:
                 continue
             otherHap = [hap[0], hap[1]]
             otherAllele = 1 - hap[loc]
             otherHap[loc] = otherAllele
-            otherHap = tuple(otherHap)
 
-            otherState = dict(state)
-            otherState[hap] -=1
-            otherState[otherHap] += 1
-            # make it hashable
-            otherState = makeFrozen(otherState)
+            otherConfs = numpy.array(confs)
+            otherConfs[:,hap[0],hap[1]] -= 1
+            otherConfs[:,otherHap[0], otherHap[1]] += 1
 
-            fullRates[state, otherState] += rate
-            #fullRates[state, state] -= rate
-    return dict(fullRates)
+            ret = ret + get_rates(states, otherConfs, rates)
 
-def config_copy_rates(state):
-    fullRates = Counter()
+    return subtract_rowsum_on_diag(ret)        
 
-    for hap,numHap in state:
-        # hap copying event
-        if numHap == 0:
-            continue
+def build_copy_rates(states):
+    ret = sparse.csr_matrix(tuple([states.folded_config_array.shape[0]]*2))    
+    confs = states.folded_config_array
 
-        for otherHap,numOtherHap in state:
-            if numOtherHap == 0:
-                continue
-            
+    if states.exact:
+        hapList = all_haps
+    else:
+        hapList = c_haps
+    
+    for hap in hapList:
+        for otherHap in hapList:
             # check if we can copy
             canCopy = True
             for loc in xrange(2):
@@ -396,107 +396,54 @@ def config_copy_rates(state):
             otherMissing = (otherHap[0] == -1) + (otherHap[1] == -1)
             assert otherMissing >= hapMissing
 
-            rate = numHap * numOtherHap / 2.
+            rates = confs[:,hap[0],hap[1]] * confs[:,otherHap[0],otherHap[1]] / 2.
             if otherMissing > hapMissing:
-                rate *= 2
+                rates *= 2
 
-            otherState = dict(state)
-            otherState[otherHap] -= 1
-            otherState[copiedHap] += 1
-            # make it hashable
-            otherState = makeFrozen(otherState)
+            otherConfs = numpy.array(confs)
+            otherConfs[:,otherHap[0],otherHap[1]] -=1
+            otherConfs[:,copiedHap[0],copiedHap[1]] += 1
+            
+            ret = ret + get_rates(states, otherConfs, rates)
 
-            fullRates[state, otherState] += rate
-            #fullRates[state, state] -= rate
-    return dict(fullRates)
+    return subtract_rowsum_on_diag(ret)
 
-def config_coal_rates(state):
-    fullRates = Counter()
 
-    for hap in all_haps:
-        if hap[0] == -1 or hap[1] == -1:
-            continue
-        leftHap = (hap[0],-1)
-        rightHap = (-1,hap[1])
+def subtract_rowsum_on_diag(spmat):
+    spmat = spmat.tocsr() - sparse.diags(numpy.array(spmat.sum(axis=1)).T, offsets=[0], format="csr")
+    return spmat.tocsr()
 
-        # two lineages coalesce into hap
-        otherState = dict(state)
-        if otherState[leftHap] == 0 or otherState[rightHap] == 0:
-            continue
+def build_cross_coal_rates(states):
+    assert states.exact
+    ret = sparse.csr_matrix(tuple([states.folded_config_array.shape[0]]*2))
+
+    confs = states.folded_config_array
+    for hap in c_haps:
+        # two lineages coalesce into hap        
+        #leftHap = (hap[0],-1)
+        #rightHap = (-1,hap[1])
+
+        otherConfs = numpy.array(confs)
         
-        rate = otherState[leftHap] * otherState[rightHap]
+        rates = otherConfs[:,hap[0],-1] * otherConfs[:,-1,hap[1]]
 
-        otherState[hap] += 1
-        otherState[leftHap] -= 1
-        otherState[rightHap] -= 1
-        # make it hashable
-        otherState = makeFrozen(otherState)
+        otherConfs[:,hap[0],hap[1]] += 1
+        otherConfs[:,hap[0],-1] -= 1
+        otherConfs[:,-1,hap[1]] -= 1
 
-        fullRates[state, otherState] += rate
-        #fullRates[state, state] -= rate
+        ret = ret + get_rates(states, otherConfs, rates)
 
-    return dict(fullRates)
-
-
+    return subtract_rowsum_on_diag(ret)
         
-def allele2idx(allele):
-    if allele == 0:
-        return 0
-    elif allele == 1:
-        return 2    
-    elif allele == -1:
-        return 1
-    else:
-        assert False
-
-def idx2allele(idx):
-    if idx == 0:
-        return 0
-    elif idx == 2:
-        return 1
-    elif idx == 1:
-        return -1
-    else:
-        assert False
-        
-def hap2idx(hap):
-    return tuple(map(allele2idx,hap))
-
-def idx2hap(idx):
-    return tuple(map(idx2allele, idx))
-
-def config2array(config):
-    ret = numpy.zeros((3,3),dtype=int)
-    for hap,count in config:
-        ret[hap2idx(hap)] = count
-    return ret
-
-def array2dict(array):
-    ret = {}
-    for i in range(array.shape[0]):
-        for j in range(array.shape[1]):
-            if i == 1 and j == 1:
-                continue
-            ret[idx2hap((i,j))] = array[i,j]
-    return ret
+def get_rates(states, otherConfs, rates):
+    otherConfs = otherConfs[rates != 0, :,:]
+    otherConfs = states.hash_config_array(otherConfs)
+    otherConfs = numpy.array([states.hash_to_foldedIdx[x] for x in otherConfs], dtype=int)
     
-    
+    confs = numpy.arange(states.folded_config_array.shape[0], dtype=int)
+    confs = confs[rates != 0]
 
-    
+    rates = rates[rates!=0]
 
-    
-    
-# class MoranDemoRates(object):
-#     ## TODO: this class is useless now
-#     def __init__(self, states, popSize, theta, mymap=None):
-#         if mymap is None:
-#             mymap = map
-        
-#         start = time.time()
-        
-#         self.theta = theta
-#         self.popSize = popSize
-#         self.states = states               
-    
-#     def getRates(self, rho):
-#         return MoranRates(nonRecomRates=self, rho=rho)
+    ret = sparse.coo_matrix((rates, (confs, otherConfs)), shape=[states.folded_config_array.shape[0]]*2)
+    return ret.tocsr()

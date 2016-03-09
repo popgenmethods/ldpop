@@ -4,7 +4,7 @@ Created on Jan 23, 2015
 @author: jkamm
 '''
 from compute_stationary import stationary
-from moran_augmented import AbstractMoranStates, makeFrozen, c_haps, makeAllConfigs
+from moran_augmented import AbstractMoranStates, makeFrozen, c_haps, makeAllConfigs, build_mut_rates, build_copy_rates, get_rates, subtract_rowsum_on_diag
 
 import logging, time, numpy, scipy
 from scipy import sparse
@@ -41,108 +41,38 @@ class MoranStatesFinite(AbstractMoranStates):
         self.build_symmetries()        
         
         start = time.time()        
-        self.unscaled_recom_rates = self.build_rates(partial(config_recom_rates, self.n))
+        #self.unscaled_recom_rates = self.build_rates(partial(config_recom_rates, self.n))
+        self.unscaled_recom_rates = build_recom_rates(self)
         logging.info("Constructed recombination rate matrix in %f seconds" % (time.time() - start))
 
         start = time.time()        
-        self.unscaled_mut_rates = self.build_rates(config_mut_rates)
+        self.unscaled_mut_rates = build_mut_rates(self)
         logging.info("Constructed mut rate matrix in %f seconds" % (time.time() - start))
 
         start = time.time()
-        self.unscaled_coal_rates = self.build_rates(config_copy_rates)
+        #self.unscaled_coal_rates = self.build_rates(config_copy_rates)
+        self.unscaled_coal_rates = build_copy_rates(self)
         logging.info("Constructed copying rate matrix in %f seconds" % (time.time() - start))
         
-    # def getRates(self, popSize, theta, rho):
-    #     return MoranRatesDK(states=self, rho=rho, popSize=popSize, theta=theta).rates
-    
-def config_copy_rates(state):
-    ret = Counter()
-    for hap,numHap in state:
-        # hap copying event
-        if numHap > 0:
-            for otherHap in c_haps:
-                otherState = dict(state)                
-                numOtherHap = otherState[otherHap]
 
-                if otherHap == hap or numOtherHap == 0:
-                    continue
-
-                rate = numHap * numOtherHap / float(2)
-
-                otherState[otherHap] -= 1
-                otherState[hap] += 1
-                # make it hashable
-                otherState = makeFrozen(otherState)
-
-                ret[state, otherState] += rate
-    return ret
-    
-def config_mut_rates(state):
-    ret = Counter()
-    for hap,numHap in state:
-        # mutation
-        if numHap > 0:
-            rate = numHap
-            for loc in xrange(2):
-                otherHap = [hap[0], hap[1]]
-                otherAllele = 1 - hap[loc]
-                otherHap[loc] = otherAllele
-                otherHap = tuple(otherHap)
-
-                otherState = dict(state)
-                otherState[hap] -=1
-                otherState[otherHap] += 1
-                # make it hashable
-                otherState = makeFrozen(otherState)
-
-                ret[state, otherState] += rate
-    return ret
-        
-# def config_recom_rates(n, state):
-#     ret = Counter()
-#     # recombination
-#     for leftHap in c_haps:
-#         for rightHap in c_haps:
-#             for replacedHap in c_haps:
-#                 config = dict(state)
-#                 numWays = config[replacedHap]
-#                 config[replacedHap] -= 1
-#                 numWays *= config[leftHap]
-#                 config[leftHap] -= 1
-#                 numWays *= config[rightHap]
-#                 config[rightHap] -= 1
-
-#                 if numWays == 0:
-#                     continue
-
-#                 config = dict(state)
-#                 config[replacedHap] -= 1
-#                 config[(leftHap[0], rightHap[1])] += 1
-#                 otherState = makeFrozen(config)
-
-#                 assert n >= 3
-#                 rate = numWays / float(n-1) / float(n-2)
-#                 ret[state, otherState] += rate
-#     return ret
-
-def config_recom_rates(n, state):
-    ret = Counter()
-    # recombination
+def build_recom_rates(states):
+    ret = sparse.csr_matrix(tuple([states.folded_config_array.shape[0]]*2))    
+    confs = states.folded_config_array
     for mom in c_haps:
         for dad in c_haps:
-            config = dict(state)
-            numWays = config[mom]
-            config[mom] -= 1
-            numWays *= config[dad]
-            config[dad] -= 1
+            otherConfs = numpy.array(confs)
+            
+            rates = numpy.array(otherConfs[:,mom[0],mom[1]], dtype=float)
+            otherConfs[:,mom[0],mom[1]] -= 1
+            
+            rates *= otherConfs[:,dad[0],dad[1]]
+            otherConfs[:,dad[0],dad[1]] -= 1
 
-            if numWays == 0:
-                continue
+            rates *= 1. / float(states.n-1) / float(2)
+            
+            otherConfs[:,mom[0], dad[1]] += 1
+            otherConfs[:,dad[0], mom[1]] += 1
 
-            config[(mom[0], dad[1])] += 1
-            config[(dad[0], mom[1])] += 1
-            otherState = makeFrozen(config)
+            ret = ret + get_rates(states, otherConfs, rates)
 
-            rate = numWays / float(n-1) / float(2)
-            ret[state, otherState] += rate
-    return ret
+    return subtract_rowsum_on_diag(ret)
