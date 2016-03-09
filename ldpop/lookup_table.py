@@ -6,7 +6,7 @@ Created on Jan 26, 2015
 
 
 from compute_likelihoods import folded_likelihoods, NumericalError
-from moran_augmented import MoranStatesAugmented, makeFrozen, MoranRates
+from moran_augmented import MoranStatesAugmented, MoranRates
 from moran_finite import MoranStatesFinite
 from compute_stationary import stationary
 
@@ -21,12 +21,12 @@ def getKey(num00, num01, num10, num11):
     key[(0,1)] = num01
     key[(1,0)] = num10
     key[(1,1)] = num11
-    key[(0,-1)] = 0
-    key[(-1,0)] = 0
-    key[(1,-1)] = 0
-    key[(-1,1)] = 0
+    # key[(0,-1)] = 0
+    # key[(-1,0)] = 0
+    # key[(1,-1)] = 0
+    # key[(-1,1)] = 0
     #return frozenset(key.items())
-    return makeFrozen(key)
+    return tuple(sorted(key.items()))
 
 #columns has the columns of the table (plus possibly extraneous things, but we just pull out what we want
 def getRow(num00, num01, num10, num11, columns, rhos):

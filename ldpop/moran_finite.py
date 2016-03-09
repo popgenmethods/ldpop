@@ -4,7 +4,7 @@ Created on Jan 23, 2015
 @author: jkamm
 '''
 from compute_stationary import stationary
-from moran_augmented import AbstractMoranStates, makeFrozen, c_haps, makeAllConfigs, build_mut_rates, build_copy_rates, get_rates, subtract_rowsum_on_diag
+from moran_augmented import AbstractMoranStates, c_haps, makeAllConfigs, build_mut_rates, build_copy_rates, get_rates, subtract_rowsum_on_diag
 
 import logging, time, numpy, scipy
 from scipy import sparse

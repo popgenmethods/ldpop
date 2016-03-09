@@ -87,11 +87,6 @@ def makeAllConfigs(hapList, n):
         configList[numHaps].append(config)
     return configList
 
-        
-def makeFrozen(dict):
-    #return frozenset(dict.items())
-    return tuple(sorted(dict.items()))
-
 def one_locus_probs(popSize, theta, n):
     coalRate = 1. / popSize
     mutRate = float(theta) / 2.
@@ -118,10 +113,7 @@ class AbstractMoranStates(object):
         bConfigs = makeAllConfigs(b_haps, n)
         cConfigs = makeAllConfigs(c_haps, n)
         
-        self.all_configs = []
-        self.all_configs_idx = {}
-        self.full_configs_all = []
-        #self.numC = []
+        all_configs = []
 
         if exact:
             cList = range(n+1)
@@ -136,25 +128,15 @@ class AbstractMoranStates(object):
                         conf.update(aConf); conf.update(bConf); conf.update(cConf)
                         
                         assert len(conf) == len(all_haps)
-                        conf = makeFrozen(conf)
+                        conf = tuple(conf.items())
                         
-                        self.all_configs_idx[conf] = len(self.all_configs)
-                        self.all_configs.append(conf)
+                        all_configs.append(conf)
 
-                        if numC == n:
-                            self.full_configs_all.append(conf)      
-                    
-        assert len(self.all_configs) == len(self.all_configs_idx)
-        assert len(self.all_configs_idx) > 0
-
-        self.build_config_array()
-
-    def build_config_array(self):
         """
         Create self.config_array, defined by:
         self.config_array[i, a, b] = the count of haplotype (a,b) in the i-th config
         """
-        idxs, vals = zip(*[zip(*config) for config in self.all_configs])
+        idxs, vals = zip(*[zip(*config) for config in all_configs])
         idxs = numpy.array(idxs) # axis0=config, axis1=hap, axis2=locus
         vals = numpy.array(vals) # axis0=config, axis1=hap
 
@@ -163,13 +145,13 @@ class AbstractMoranStates(object):
         idxs = idxs.T # move the config axis at the end, the locus axis to the front
         # broadcast up the indices [0,1,2,3,...,max_config] to have same dimension as idxs
         # idxs becomes the pair (config_idxs, idxs)
-        idxs = numpy.broadcast_arrays(numpy.arange(len(self.all_configs)),
+        idxs = numpy.broadcast_arrays(numpy.arange(len(all_configs)),
                                       idxs)
         # now stack the config_idxs onto the idxs, along the locus axis
         idxs = numpy.vstack(idxs)[1:,:,:] # take [1:,...] because we copied the config_idx twice (for each locus)
         # now move config index to the front, locus index to the back
         idxs = idxs.T
-        assert idxs.shape == (len(self.all_configs), 8, 3) # axis0=config, axis1=hap, axis2=configIdx/locus
+        assert idxs.shape == (len(all_configs), 8, 3) # axis0=config, axis1=hap, axis2=configIdx/locus
 
         # flatten the counts
         vals = numpy.reshape(vals,-1,order='C')
@@ -177,7 +159,7 @@ class AbstractMoranStates(object):
         idxs = numpy.reshape(idxs,(-1,3),order='C')
 
         # now create the config array, and assign all the counts to it
-        self.config_array = numpy.zeros((len(self.all_configs), 3, 3), dtype=int)
+        self.config_array = numpy.zeros((len(all_configs), 3, 3), dtype=int)
         self.config_array[idxs[:,0],idxs[:,1],idxs[:,2]] = vals
 
         # create dictionary mapping their hash values back to their index
@@ -248,34 +230,27 @@ class AbstractMoranStates(object):
         
         logging.info("%f seconds to build symmetry matrices" % (time.time() - start))
 
-    def unfold_likelihoods(self, liks):
+    def ordered_log_likelihoods(self, liks):
         try:
-            return {t: self.unfold_likelihoods(v) for t,v in liks.items()}
+            return {time : self.ordered_log_likelihoods(l) for time,l in liks.iteritems()}
         except AttributeError:
             liks = liks * self.antisymmetries
-            return {config : liks[self.all_configs_idx[config]] for config in self.full_configs_all}
 
-    def ordered_log_likelihoods(self, liks):
-        unordered_likelihoods = self.unfold_likelihoods(liks)
+            all_nC = self.config_array[:,:-1,:-1].sum(axis=(1,2))
+            liks = liks[all_nC == self.n]
 
-        try:
-            return {time : single_ordered_log_likelihood(self.n, unordered) for time,unordered in unordered_likelihoods.items()}
-        except AttributeError:
-            return single_ordered_log_likelihood(self.n, unordered_likelihoods)    
+            full_confs = self.config_array[:,:-1,:-1][all_nC == self.n, :, :]
 
-        
-def log_n_factorial(n):
-    return scipy.special.gammaln(n+1)
+            liks = numpy.log(liks)
+            liks -= scipy.special.gammaln(self.n+1)
+            for i in (0,1):
+                for j in (0,1):
+                    liks += scipy.special.gammaln(full_confs[:,i,j]+1)
 
-def single_ordered_log_likelihood(n, unordered_likelihoods):
-    ordered_ll = {}
-    for config, likelihood in unordered_likelihoods.items():
-        comb = log_n_factorial(n)
-        for hap,count in config:
-            comb -= log_n_factorial(count)
-            
-        ordered_ll[config] = math.log(likelihood) - comb
-    return ordered_ll
+            full_confs = map(lambda cnf: tuple(sorted(((i,j),cnf[i,j]) for i in (0,1) for j in (0,1))),
+                             full_confs)
+            return dict(zip(full_confs, liks))
+
    
 class MoranStatesAugmented(AbstractMoranStates):
     '''
