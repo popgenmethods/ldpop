@@ -40,9 +40,6 @@ When ldpop is publicly released, it will be free software under conditions of GN
 For Jeff & Jeff: `bin/ldtable.py` corresponds to `build_ldhat_table.py` from before. `bin/ldproposal.py` corresponds to `build_timed_grid_table.py` from before. The major remaining task is to add a callable to do the importance sampling -- I am thinking a jar file like `bin/ImportanceSampler.jar`
 
 Tasks, in roughly the order of importance (edited by Jeff S. 3/8/16):
-  * Merge Jeff Spence's changes to the main branch of svn repository
-* Clean up [bin/ldproposal.py](bin/ldproposal.py)
-* Finish [example/example_importance_sampling.sh](example/example_importance_sampling.sh)  
 * Test with ldhat, ldhelmet  
 * Test ldpop installation for clean install
   * Can use virtualenv, or a virtual machine  
