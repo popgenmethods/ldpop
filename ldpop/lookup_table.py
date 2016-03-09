@@ -179,6 +179,8 @@ class LookupTable(pandas.DataFrame):
         return "\n".join([" ".join(map(str,x)) for x in ret])
         
 def epochTimesToIntervalLengths(epochTimes):
+    if len(epochTimes) == 0:
+        return []
     if epochTimes[0] == 0:
         raise IOError("Your first epoch time point should not be zero!")
     epochLengths = list(epochTimes)
