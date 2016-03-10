@@ -5,4 +5,4 @@
 ../bin/ldproposal.py -n 5 -th .008 -s 100,.1,1 -t .5,.58 -rh 1.0 --grdpts 3 --log . > proposal.txt
 
 #now, use the proposal to print ARGs
-java -ea -jar ../bin/ImportanceSampler.jar --ldproposal proposal.txt --num_samples 10 --config 1,2,1,1 --trees > args.txt
+java -ea -jar ../bin/ImportanceSampler.jar --ldproposal proposal.txt --num_samples 10 --config 1,2,1,1 --trees --seed 995539384 > args.txt
