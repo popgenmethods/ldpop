@@ -206,6 +206,13 @@ def rhos_to_string(rhos):
     return " ".join(map(str, rho_line))
 
 def rhos_from_string(rho_string):
+    """
+    Return a list of rhos obtained from a comma separated string of rhos in one of two formats:
+    if the rho_string has two elements, <num_rho>,<max_rho> return a list of size num_rho [0, ...., max_rho]
+    otherwise, the rho_string should be <rho_1>,<step_size_1>,<rho_2>... and return [rho_1, rho_1 + step_size_1, ..., rho_2,...]
+    note that this implies that if rho_string is just <rho>, return [rho].
+    """
+    
     rho_args = rho_string.split(",")
 
     if len(rho_args) == 2:
