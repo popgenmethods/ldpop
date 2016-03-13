@@ -1,5 +1,6 @@
 # ldpop
-Two locus likelihoods and ARGs under changing population size
+ldpop is a program for computing two-locus likelihoods under the coalescent with recombination, with variable population size. It produces lookup tables that can be used by LDhat/LDhelmet to estimate recombination maps.
+ldpop also provides utilities for efficient posterior sampling of two-locus ARGs.
 
 ## Installation and Dependencies
 
@@ -7,8 +8,8 @@ Prerequisites:
 * Scientific distribution of Python 2.7, e.g. [Anaconda](http://continuum.io/downloads), [Enthought Canopy](https://www.enthought.com/products/canopy/)
   * Alternatively, custom installation of pip, the SciPy stack
 * Optional: Java 8
+  * Not required for computing lookup tables for LDhat/LDhelmet.
   * Required for posterior sampling of 2-locus ARGs.
-  * Not required for computing lookup tables.
 
 To install, in the top-level directory of ldpop (where "setup.py" lives), type
 ```
