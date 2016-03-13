@@ -7,7 +7,7 @@ Prerequisites:
 * Scientific distribution of Python 2.7, e.g. [Anaconda](http://continuum.io/downloads), [Enthought Canopy](https://www.enthought.com/products/canopy/)
   * Alternatively, custom installation of pip, the SciPy stack
 * Optional: Java 8
-  * Required for importance sampler
+  * Required for posterior sampling of 2-locus ARGs. Not required for computing lookup tables.
 
 To install, in the top-level directory of ldpop (where "setup.py" lives), type
 ```
