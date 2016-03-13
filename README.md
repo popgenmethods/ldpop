@@ -43,6 +43,11 @@ Also, see the [examples](example/).
 
 [John Kamm](mailto:jkamm@stat.berkeley.edu), Jeffrey Spence, Jeffrey Chan, Yun S. Song
 
+## Reference
+
+Kamm, J.A., Spence, J.P., Chan, J., and Song, Y.S. An exact algorithm and efficient importance sampling for computing two-locus likelihoods under variable population size. http://arxiv.org/abs/1510.06017
+
+
 ## License
 
 ldpop is not yet publicly released; please do not share with others.
