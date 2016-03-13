@@ -1,8 +1,8 @@
 # ldpop
-ldpop is a program for computing two-locus likelihoods under the coalescent with recombination. Unlike previous methods, ldpop correctly accounts for variable population size history.
+ldpop is a program for computing 2-locus likelihoods under the coalescent with recombination. Unlike previous methods, ldpop correctly accounts for variable population size history.
 
 ldpop produces lookup tables that can be used by [LDhat](https://github.com/auton1/LDhat) or [LDhelmet](https://sourceforge.net/projects/ldhelmet/) to estimate recombination maps.
-ldpop also provides utilities for efficient posterior sampling of two-locus ARGs.
+ldpop also provides utilities for efficient posterior sampling of 2-locus ARGs.
 
 ## Installation and Dependencies
 
