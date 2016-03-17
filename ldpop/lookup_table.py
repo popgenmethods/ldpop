@@ -54,15 +54,17 @@ def getColumn(moranRates, rho, theta, popSizes, timeLens, init):
         print rho
         print err
 
-def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):   
-    states = get_states(n, exact)
-    rhoGrid = sorted(rhoGrid)   
+def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):
+    rhoGrid = list(rhoGrid)
+    assert rhoGrid == sorted(rhoGrid)
+    
+    # make the pool first to avoid copying large objects. maxtasksperchild=1 to avoid memory issues
+    executor = Pool(cores, maxtasksperchild=1)
 
+    # make the states and the rates
+    states = get_states(n, exact)
     moranRates = MoranRates(states)
-    
-    # now make the pool
-    executor = Pool(cores)
-    
+       
     # compute initial distributions and likelihoods
     prevInit = states.getUnlinkedStationary(popSize=popSizes[-1], theta=theta)
     ret = []
