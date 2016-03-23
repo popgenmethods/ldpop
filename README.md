@@ -58,3 +58,4 @@ When ldpop is publicly released, it will be free software under conditions of GN
 
 Tasks, in roughly the order of importance (edited by Jeff S. 3/9/16):
 * Write better tests in test/
+* When finished, print out something like "Cleaning up results..." (right now it looks like it is hanging after it's finished, when it is really cleaning up all the results in serial)
