@@ -1,10 +1,3 @@
-'''
-Created on Jan 26, 2015
-
-@author: jeffreyspence
-'''
-
-
 from compute_likelihoods import folded_likelihoods, NumericalError
 from moran_augmented import MoranStatesAugmented, MoranRates
 from moran_finite import MoranStatesFinite
@@ -82,15 +75,11 @@ def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):
     return [(rho, lik) for rho,lik in zip(rhoGrid, reversed(ret))]
 
 
-class LookupTable(pandas.DataFrame):
+class LookupTable(object):
     """
     Lookup table of 2-locus likelihoods. Construct with
         lookup_table = LookupTable(n, theta, rhos, [pop_sizes], [times], [exact], [processes])
     (optional arguments in square bracket [])
-
-    LookupTable is a subclass of pandas.DataFrame, with rows corresponding to configs and columns corresponding to rho. So
-        lookup_table.ix['13 0 0 1', 1.0]
-    returns the likelihood of sample config '13 0 0 1' at rho=1.0.
 
     Printing
     --------
@@ -100,6 +89,10 @@ class LookupTable(pandas.DataFrame):
 
     Attributes
     ----------
+    lookup_table.table = pandas.DataFrame, 
+        with rows corresponding to configs and columns corresponding to rho. So
+             lookup_table.table.ix['13 0 0 1', 1.0]
+        returns the likelihood of sample config '13 0 0 1' at rho=1.0.
     lookup_table.n = number of haplotypes
     lookup_table.theta = 2*mutation rate
     lookup_table.column = [rho0,rho1,...] = the grid of rhos (2*recomb rate)
@@ -154,9 +147,10 @@ class LookupTable(pandas.DataFrame):
                         index += ["%d %d %d %d" % (hapMult00, hapMult01, hapMult10, hapMult11)]
                         rows += [getRow(hapMult00, hapMult01, hapMult10, hapMult11, columns, rhos)]
                         #print str(configsSoFar) + " # " + str(hapMult00) + " " + str(hapMult01) + " " + str(hapMult10) + " " + str(hapMult11) + " : " + " ".join(getRow(hapMult00, hapMult01, hapMult10, hapMult11, columns, rhos))
-        super(LookupTable, self).__init__(rows, index=index, columns=rhos)
+        #super(LookupTable, self).__init__(rows, index=index, columns=rhos)
+        self.table = pandas.DataFrame(rows, index=index, columns=rhos)
        
-        assert self.shape[0] == numConfigs
+        assert self.table.shape[0] == numConfigs
         end = time.time()
         logging.info("Computed lookup table in %f seconds " % (end-start))
             
@@ -168,13 +162,13 @@ class LookupTable(pandas.DataFrame):
        
     def __str__(self):
         ret = []
-        ret += [[self.n, self.shape[0]]]
+        ret += [[self.n, self.table.shape[0]]]
         ret += [[1, self.theta]]
 
-        ret += [rhos_to_string(self.columns).split()]
+        ret += [rhos_to_string(self.table.columns).split()]
 
         ret += [[],[]]         
-        for i,(config, row) in enumerate(self.iterrows(),start=1):
+        for i,(config, row) in enumerate(self.table.iterrows(),start=1):
             ret += [[i,"#",config,":"] + list(row)]
 
         return "\n".join([" ".join(map(str,x)) for x in ret])

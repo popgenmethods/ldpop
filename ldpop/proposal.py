@@ -11,16 +11,14 @@ for a in range(2):
     for b in range(2):
         haps.append((a,b))
 
-class ISProposal(pandas.Panel):
+class ISProposal(object):
     """
     Tensor of 2-locus likelihoods, with axes corresponding to recombination rates, times, and configs. 
     This is to be used as a proposal distribution with ImportanceSampler.jar Construct with
     ldproposal = ISProposal(n, theta, rhos, pop_sizes, times, grid_points, [processes])
     (optional arguments in square bracket [])
 
-    ISProposal is a subclass of pandas.Panel, with the index axis corresponding to rho, rows corresponding to configs and columns corresponding to time points. So
-       ldproposal.ix[5.0,'13 0 0 1', 1.0]
-    returns the approximate likelihood of sample config '13 0 0 1' with rho=5.0 at time 1.0.
+    ISProposal is a subclass of pandas.Panel, 
 
     Printing
     --------
@@ -30,6 +28,10 @@ class ISProposal(pandas.Panel):
 
     Attributes
     ----------
+    ldproposal.panel = pandas.Panel,
+         with the index axis corresponding to rho, rows corresponding to configs and columns corresponding to time points. So
+                ldproposal.ix[5.0,'13 0 0 1', 1.0]
+         returns the approximate likelihood of sample config '13 0 0 1' with rho=5.0 at time 1.0.
     ldproposal.num_haps = number of haplotypes in each config in the table (2*n in the constructor)
     ldproposal.theta = 2*mutation rate
     ldproposal.pop_sizes = [size0,size1,...,sizeD] = coalescent scaled population sizes
@@ -73,7 +75,7 @@ class ISProposal(pandas.Panel):
                 rows += [[math.exp(likelihoodDict[disc_time][config]) for disc_time in timeList]]
             data[rho] = pandas.DataFrame(rows, index=index, columns=timeList)
         
-        super(ISProposal, self).__init__(data)
+        self.panel = pandas.Panel(data)
         end = time.time()
         logging.info("Computed lookup table in %f seconds " % (end-start))
         self.num_haps = 2*n
@@ -90,11 +92,11 @@ class ISProposal(pandas.Panel):
         ret += [["theta", self.theta]]
         ret += [["popSizes", ",".join(map(str,self.pop_sizes))]]
         ret += [["epochTimes", ",".join(map(str,self.times))]]
-        ret += [["rhos", rhos_to_string(self.keys())]]
+        ret += [["rhos", rhos_to_string(self.panel.keys())]]
         ret += [["%"]]  #delimiter
         # Iterate over each config x timepoints table for a given rho, then print.
-        for rho, data_frame in self.iteritems():
-            data_frame = self[rho]
+        for rho, data_frame in self.panel.iteritems():
+            data_frame = self.panel[rho]
             ret += [["rho", rho]]
             ret += [["config"," ".join(map(str,data_frame.keys()))]]
             for (config, row) in data_frame.iterrows():
