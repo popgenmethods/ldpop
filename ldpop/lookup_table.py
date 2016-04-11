@@ -68,6 +68,7 @@ def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):
         ret.append(executor.apply_async(getColumn,
                                         (moranRates, rho, theta, popSizes, timeLens, prevInit)))
 
+    logging.info("Cleaning up results...")
     ret = [states.ordered_log_likelihoods(result.get()) for result in ret]
     executor.close()
     executor.join()
@@ -125,6 +126,7 @@ class LookupTable(object):
 
         # use approx to compute rho == 0.0, because exact==approx and approx is faster
         if exact and minRho == 0.0:
+            logging.info("Computing column for rho=0")
             results = computeLikelihoods(n, False, pop_sizes, theta, timeLens, [0.0], processes) + results
             rhos = [0.0] + rhos
 
