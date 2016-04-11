@@ -15,7 +15,7 @@ Prerequisites:
 * Scientific distribution of Python 2.7, e.g. [Anaconda](http://continuum.io/downloads), [Enthought Canopy](https://www.enthought.com/products/canopy/)
   * Alternatively, custom installation of pip, the SciPy stack
 * Optional: Java 8
-  * Not required for computing lookup tables for LDhat/LDhelmet.
+  * Not required for computing lookup tables.
   * Required for posterior sampling of 2-locus ARGs.
 
 To install, in the top-level directory of LDpop (where "setup.py" lives), type
