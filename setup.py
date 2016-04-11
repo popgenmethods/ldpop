@@ -6,7 +6,7 @@ import numpy
 
 
 setup(name='ldpop',
-      version='0.0.1',
+      version='0.1',
       description='Computing the two-locus sampling probability for variable population size',
       author='Jack Kamm, Jeffrey Spence, Jeffrey Chan, Yun S. Song',
       author_email='jkamm@stat.berkeley.edu, spence.jeffrey@berkeley.edu, chanjed@cs.berkeley.edu, yss@eecs.berkeley.edu',
