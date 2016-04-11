@@ -45,7 +45,7 @@ Also, see the [examples](example/).
 
 ## Reference
 
-Kamm, J.A., Spence, J.P., Chan, J., and Song, Y.S. An exact algorithm and efficient importance sampling for computing two-locus likelihoods under variable population size. http://arxiv.org/abs/1510.06017
+Kamm, J.A., Spence, J.P., Chan, J., and Song, Y.S. Two-Locus Likelihoods under Variable Population Size and Fine-Scale Recombination Rate Estimation. http://arxiv.org/abs/1510.06017
 
 
 ## License
