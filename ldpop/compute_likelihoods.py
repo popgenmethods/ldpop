@@ -10,45 +10,42 @@ import numpy, scipy, math, logging, time
 from scipy.sparse.linalg import expm_multiply
 from scipy.linalg import norm
 
-# def ordered_log_likelihoods(states, rho, theta, popSizes, timeLens, gridPointsPerEpoch=0,  lastEpochInit=None):
-#     return states.ordered_log_likelihoods(folded_likelihoods(states, rho, theta, popSizes, timeLens, gridPointsPerEpoch, lastEpochInit))
-
 class NumericalError(StandardError):
     def __init__(self, message):
         super(NumericalError, self).__init__(message)
     
 
 ''' call this before dividing out pi_c'''
-def assert_valid_likelihoods(likelihoods, pi_c, states):
+def assert_valid_likelihoods(likelihoods, pi_c, moranRates):
     EPSILON = 1e-7
     if abs(sum(likelihoods) - 1.) >= EPSILON:
         raise NumericalError( "%g" % (sum(likelihoods) - 1.0))
-    if not all([abs( math.log(sum(likelihoods[states.numC == currC]) / pi_c[currC]) ) < EPSILON for currC in range(len(pi_c)) if pi_c[currC] != 0]):
-        raise NumericalError(str([math.log(sum(likelihoods[states.numC == currC]) / pi_c[currC]) for currC in range(len(pi_c)) if pi_c[currC] != 0]))
+    if not all([abs( math.log(sum(likelihoods[moranRates.numC == currC]) / pi_c[currC]) ) < EPSILON for currC in range(len(pi_c)) if pi_c[currC] != 0]):
+        raise NumericalError(str([math.log(sum(likelihoods[moranRates.numC == currC]) / pi_c[currC]) for currC in range(len(pi_c)) if pi_c[currC] != 0]))
 
 
-def folded_likelihoods(states, rho, theta, popSizes, timeLens, gridPointsPerEpoch=0, lastEpochInit=None):
+def folded_likelihoods(moranRates, rho, theta, popSizes, timeLens, gridPointsPerEpoch=0, lastEpochInit=None):
     assert len(popSizes) == len(timeLens) + 1
     timeStart = time.time()
         
-    pi_c = states.get_pi_c(popSize=popSizes[-1], theta=theta, rho=rho)
-    renormalize = pi_c[states.numC]
+    pi_c = moranRates.get_pi_c(popSize=popSizes[-1], theta=theta, rho=rho)
+    renormalize = pi_c[moranRates.numC]
     not_zero = renormalize != 0.
 
-    rates = states.getRates(popSize=popSizes[-1],rho=rho,theta=theta)
+    rates = moranRates.getRates(popSize=popSizes[-1],rho=rho,theta=theta)
     likelihoods = stationary(Q=rates, init=lastEpochInit)
     
-    assert_valid_likelihoods(likelihoods, pi_c, states)
+    assert_valid_likelihoods(likelihoods, pi_c, moranRates)
     likelihoods[not_zero] /= renormalize[not_zero]
 
     ret = {}
     currTime = sum(timeLens)
 
     for t,popSize in reversed(zip(timeLens, popSizes)):
-        rates = states.getRates(popSize=popSize,theta=theta,rho=rho)
+        rates = moranRates.getRates(popSize=popSize,theta=theta,rho=rho)
                 
-        pi_c = states.get_pi_c(popSize=popSize, theta=theta, rho=rho)
-        renormalize = pi_c[states.numC]
+        pi_c = moranRates.get_pi_c(popSize=popSize, theta=theta, rho=rho)
+        renormalize = pi_c[moranRates.numC]
         likelihoods *= renormalize
         if gridPointsPerEpoch == 0:
             start = time.time()
@@ -58,7 +55,7 @@ def folded_likelihoods(states, rho, theta, popSizes, timeLens, gridPointsPerEpoc
             
             not_zero = renormalize != 0.
             
-            assert_valid_likelihoods(likelihoods, pi_c, states)
+            assert_valid_likelihoods(likelihoods, pi_c, moranRates)
             likelihoods[not_zero] /= renormalize[not_zero]
             
             assert norm(likelihoods[numpy.logical_not(not_zero)], 1) < 1e-300
@@ -73,7 +70,7 @@ def folded_likelihoods(states, rho, theta, popSizes, timeLens, gridPointsPerEpoc
                 currLik = likelihoods[i]
                 not_zero = renormalize != 0.
                 
-                assert_valid_likelihoods(currLik, pi_c, states)
+                assert_valid_likelihoods(currLik, pi_c, moranRates)
                 currLik[not_zero] /= renormalize[not_zero]
                 
                 assert norm(currLik[numpy.logical_not(not_zero)], 1) < 1e-300
