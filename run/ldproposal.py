@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-
+from __future__ import print_function
 from ldpop import ISProposal, rhos_from_string
 import logging, argparse
 
@@ -30,8 +30,8 @@ if __name__ == '__main__':
         times = []
     else:
         popSizes = [float(i) for i in args.s.split(",")]
-        times = map(float, args.t.split(","))
+        times = [float(t) for t in args.t.split(",")]
 
     assert len(popSizes) == len(times)+1    
     
-    print ISProposal(args.n, args.th, rhos, popSizes, times, args.grdpts, args.cores)
+    print(ISProposal(args.n, args.th, rhos, popSizes, times, args.grdpts, args.cores))

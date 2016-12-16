@@ -3,7 +3,14 @@ Created on Jan 19, 2015
 
 @author: jkamm
 '''
-from compute_stationary import stationary, stationary1d_tridiagonal, assertValidProbs
+from __future__ import division
+from __future__ import absolute_import
+from builtins import map
+from builtins import zip
+from builtins import range
+from builtins import object
+from past.utils import old_div
+from .compute_stationary import stationary, stationary1d_tridiagonal, assertValidProbs
 
 import logging, time, numpy, math, scipy, scipy.misc, scipy.special
 from scipy import sparse
@@ -28,14 +35,14 @@ class MoranRates(object):
         if not self.exact:
             return numpy.array([0.0] * self.n + [1.0])
         n=self.n
-        coalRate = 1. / popSize
-        recomRate = float(rho) / 2.
+        coalRate = old_div(1., popSize)
+        recomRate = old_div(float(rho), 2.)
 
         if rho == 0.0:
             return numpy.array([0.0] * self.n + [1.0])
         else:        
             numCoupledLinsRates = sparse.dok_matrix((n+1, n+1))
-            for i in xrange(n+1):
+            for i in range(n+1):
                 if i < n:
                     numCoupledLinsRates[i,i+1] = ((n-i)**2) * coalRate
                     numCoupledLinsRates[i,i] -= numCoupledLinsRates[i,i+1]
@@ -47,9 +54,9 @@ class MoranRates(object):
     def getRates(self, popSize, theta, rho):
         #return MoranRates(states=self, rho=rho, popSize=popSize, theta=theta).rates
         start = time.time()
-        recomRate = float(rho) / 2.
-        mutRate = float(theta) / 2.
-        coalRate = 1. / float(popSize)
+        recomRate = old_div(float(rho), 2.)
+        mutRate = old_div(float(theta), 2.)
+        coalRate = old_div(1., float(popSize))
         #self.rates = nonRecomRates.rates + recomRate * get_recom_rates(self.n)
         ret = recomRate * self.unscaled_recom_rates + mutRate * self.unscaled_mut_rates + coalRate * self.unscaled_coal_rates
         end = time.time()
@@ -58,10 +65,10 @@ class MoranRates(object):
 
 # make all haplotypes
 a_haps = []; b_haps = []; c_haps = []
-for allele1 in xrange(2):
+for allele1 in range(2):
     a_haps.append((allele1,-1))
     b_haps.append((-1, allele1))
-    for allele2 in xrange(2):
+    for allele2 in range(2):
         c_haps.append((allele1,allele2))
 
 all_haps = a_haps + b_haps + c_haps
@@ -73,12 +80,12 @@ def makeAllConfigs(hapList, n):
     for hapIdx,hap in enumerate(hapList):
         newConfigList = []
         for config in tmpConfigList:
-            numHaps = sum([v for k,v in config.items()])
+            numHaps = sum([v for k,v in list(config.items())])
             assert numHaps <= n
             if hapIdx == len(hapList)-1:
                 next_count = [n-numHaps]
             else:
-                next_count = xrange(n - numHaps + 1)
+                next_count = range(n - numHaps + 1)
             for i in next_count:
                 newConfig = dict(config)
                 newConfig[hap] = i
@@ -88,11 +95,11 @@ def makeAllConfigs(hapList, n):
     return tmpConfigList
 
 def one_locus_probs(popSize, theta, n):
-    coalRate = 1. / popSize
-    mutRate = float(theta) / 2.
+    coalRate = old_div(1., popSize)
+    mutRate = old_div(float(theta), 2.)
     
     numOnesRates = sparse.dok_matrix((n+1,n+1))
-    for i in xrange(n+1):
+    for i in range(n+1):
         if i < n:
             numOnesRates[i,i+1] = (n-i) * mutRate + i * (n-i) / 2.0 * coalRate
             numOnesRates[i,i] -= numOnesRates[i,i+1]
@@ -113,7 +120,7 @@ class AbstractMoranStates(object):
         self.config_array[i, a, b] = the count of haplotype (a,b) in the i-th config
         """
         if exact:
-            cList = range(n+1)
+            cList = list(range(n+1))
         else:
             cList = [n]
 
@@ -134,7 +141,7 @@ class AbstractMoranStates(object):
 
         self.config_array = numpy.zeros((len(all_configs), 3, 3), dtype=int)
         for idx,conf in enumerate(all_configs):
-            for (i,j),count in conf.iteritems():
+            for (i,j),count in conf.items():
                 self.config_array[idx,i,j] = count
 
         # create dictionary mapping their hash values back to their index
@@ -184,13 +191,13 @@ class AbstractMoranStates(object):
         allIdx_to_foldedIdx = {v:k for k,v in enumerate(foldedIdx_to_allIdx)}       
         allIdx_to_foldedIdx = [allIdx_to_foldedIdx[x] for x in folded_list]
 
-        self.hash_to_foldedIdx = {k: allIdx_to_foldedIdx[v] for k,v in self.hash_to_allIdx.iteritems()}
+        self.hash_to_foldedIdx = {k: allIdx_to_foldedIdx[v] for k,v in self.hash_to_allIdx.items()}
         self.folded_config_array = self.config_array[foldedIdx_to_allIdx,:,:]        
               
         self.numC = self.folded_config_array[:,0,0] + self.folded_config_array[:,0,1] + self.folded_config_array[:,1,0] + self.folded_config_array[:,1,1]
         
         symm_mat = sparse.dok_matrix((len(allIdx_to_foldedIdx), self.folded_config_array.shape[0]))
-        symm_mat.update(dict(zip(enumerate(allIdx_to_foldedIdx), [1]*len(folded_list))))
+        symm_mat.update(dict(list(zip(enumerate(allIdx_to_foldedIdx), [1]*len(folded_list)))))
         symm_mat = symm_mat.tocsc()
         
         antisymm_mat = symm_mat.transpose().tocsr(copy=True)
@@ -206,7 +213,7 @@ class AbstractMoranStates(object):
 
     def ordered_log_likelihoods(self, liks):
         try:
-            return {time : self.ordered_log_likelihoods(l) for time,l in liks.iteritems()}
+            return {time : self.ordered_log_likelihoods(l) for time,l in liks.items()}
         except AttributeError:
             liks = liks * self.antisymmetries
 
@@ -221,9 +228,8 @@ class AbstractMoranStates(object):
                 for j in (0,1):
                     liks += scipy.special.gammaln(full_confs[:,i,j]+1)
 
-            full_confs = map(lambda cnf: tuple(sorted(((i,j),cnf[i,j]) for i in (0,1) for j in (0,1))),
-                             full_confs)
-            return dict(zip(full_confs, liks))
+            full_confs = [tuple(sorted(((i,j),cnf[i,j]) for i in (0,1) for j in (0,1))) for cnf in full_confs]
+            return dict(list(zip(full_confs, liks)))
 
    
 class MoranStatesAugmented(AbstractMoranStates):
@@ -272,7 +278,7 @@ def get_folded_config_idxs(states):
     symm_arrs = [a[:,(0,-1,1),:][:,:,(0,-1,1)] for a in symm_arrs]
     
     # get hash val for each (folded) config
-    hash_vals = numpy.vstack(map(states.hash_config_array, symm_arrs))
+    hash_vals = numpy.vstack(list(map(states.hash_config_array, symm_arrs)))
     # get the smallest hash val among all the folds
     hash_vals = numpy.amin(hash_vals, axis=0)
     assert len(hash_vals) == arr.shape[0]
@@ -310,7 +316,7 @@ def build_mut_rates(states):
     
     for hap in hapList:
         rates = confs[:,hap[0],hap[1]]
-        for loc in xrange(2):
+        for loc in range(2):
             if hap[loc] == -1:
                 continue
             otherHap = [hap[0], hap[1]]
@@ -338,14 +344,14 @@ def build_copy_rates(states):
         for otherHap in hapList:
             # check if we can copy
             canCopy = True
-            for loc in xrange(2):
+            for loc in range(2):
                 if hap[loc] == -1 and otherHap[loc] != -1:
                     canCopy = False
             if not canCopy:
                 continue
 
             copiedHap = [hap[0], hap[1]]
-            for loc in xrange(2):
+            for loc in range(2):
                 if otherHap[loc] == -1:
                     copiedHap[loc] = -1
             copiedHap = tuple(copiedHap)

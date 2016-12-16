@@ -3,14 +3,19 @@ Created on Jan 20, 2015
 
 @author: jkamm
 '''
+from __future__ import division
+from __future__ import absolute_import
+from builtins import str
+from builtins import zip
+from builtins import range
 
-from compute_stationary import stationary
+from .compute_stationary import stationary
 
 import numpy, scipy, math, logging, time
 from scipy.sparse.linalg import expm_multiply
 from scipy.linalg import norm
 
-class NumericalError(StandardError):
+class NumericalError(Exception):
     def __init__(self, message):
         super(NumericalError, self).__init__(message)
     
@@ -41,7 +46,7 @@ def folded_likelihoods(moranRates, rho, theta, popSizes, timeLens, gridPointsPer
     ret = {}
     currTime = sum(timeLens)
 
-    for t,popSize in reversed(zip(timeLens, popSizes)):
+    for t,popSize in reversed(list(zip(timeLens, popSizes))):
         rates = moranRates.getRates(popSize=popSize,theta=theta,rho=rho)
                 
         pi_c = moranRates.get_pi_c(popSize=popSize, theta=theta, rho=rho)

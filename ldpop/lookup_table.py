@@ -1,7 +1,15 @@
-from compute_likelihoods import folded_likelihoods, NumericalError
-from moran_augmented import MoranStatesAugmented, MoranRates
-from moran_finite import MoranStatesFinite
-from compute_stationary import stationary
+from __future__ import division
+from __future__ import print_function
+from __future__ import absolute_import
+from builtins import zip
+from builtins import map
+from builtins import range
+from builtins import object
+from past.utils import old_div
+from .compute_likelihoods import folded_likelihoods, NumericalError
+from .moran_augmented import MoranStatesAugmented, MoranRates
+from .moran_finite import MoranStatesFinite
+from .compute_stationary import stationary
 
 from multiprocessing import Pool
 import logging, time, pandas, numpy
@@ -43,21 +51,21 @@ def get_states(n, exact):
 def getColumn(moranRates, rho, theta, popSizes, timeLens, init):
     try:
         return folded_likelihoods(moranRates, rho, theta, popSizes, timeLens, lastEpochInit=init)
-    except NumericalError, err:
-        print rho
-        print err
+    except NumericalError as err:
+        print(rho)
+        print(err)
 
 def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):
     rhoGrid = list(rhoGrid)
     assert rhoGrid == sorted(rhoGrid)
-    
+
     # make the pool first to avoid copying large objects. maxtasksperchild=1 to avoid memory issues
     executor = Pool(cores, maxtasksperchild=1)
 
     # make the states and the rates
     states = get_states(n, exact)
     moranRates = MoranRates(states)
-       
+
     # compute initial distributions and likelihoods
     prevInit = states.getUnlinkedStationary(popSize=popSizes[-1], theta=theta)
     ret = []
@@ -72,7 +80,7 @@ def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):
     ret = [states.ordered_log_likelihoods(result.get()) for result in ret]
     executor.close()
     executor.join()
-    
+
     return [(rho, lik) for rho,lik in zip(rhoGrid, reversed(ret))]
 
 
@@ -90,7 +98,7 @@ class LookupTable(object):
 
     Attributes
     ----------
-    lookup_table.table = pandas.DataFrame, 
+    lookup_table.table = pandas.DataFrame,
         with rows corresponding to configs and columns corresponding to rho. So
              lookup_table.table.ix['13 0 0 1', 1.0]
         returns the likelihood of sample config '13 0 0 1' at rho=1.0.
@@ -115,7 +123,7 @@ class LookupTable(object):
 
         timeLens = epochTimesToIntervalLengths(times)
         assert len(pop_sizes) == len(timeLens)+1
-               
+
         start = time.time()
         minRho = rhos[0]
 
@@ -131,16 +139,16 @@ class LookupTable(object):
             rhos = [0.0] + rhos
 
         #we want this to truncate, I guess:
-        halfn = int(n) / 2
+        halfn = old_div(int(n), 2)
         #nifty formula courtesy of LD hat.  Note we do want this truncation division, or whatever it's called
         numConfigs = 1 + halfn + halfn * (halfn - 1) * (halfn + 4 ) / 6 + (halfn - 1) * (halfn + 2) / 2
 
         columns = dict(results)
         index, rows = [],[]
         #make all these configs then print them out
-        for i in xrange(1, halfn + 1):
-                for j in xrange(1, i + 1):
-                    for k in xrange(j, -1, -1):
+        for i in range(1, halfn + 1):
+                for j in range(1, i + 1):
+                    for k in range(j, -1, -1):
                         hapMult11 = k
                         hapMult10 = j - k;
                         hapMult01 = i - k;
@@ -151,17 +159,17 @@ class LookupTable(object):
                         #print str(configsSoFar) + " # " + str(hapMult00) + " " + str(hapMult01) + " " + str(hapMult10) + " " + str(hapMult11) + " : " + " ".join(getRow(hapMult00, hapMult01, hapMult10, hapMult11, columns, rhos))
         #super(LookupTable, self).__init__(rows, index=index, columns=rhos)
         self.table = pandas.DataFrame(rows, index=index, columns=rhos)
-       
+
         assert self.table.shape[0] == numConfigs
         end = time.time()
         logging.info("Computed lookup table in %f seconds " % (end-start))
-            
+
         self.n = n
         self.theta = theta
         self.pop_sizes = list(pop_sizes)
         self.times = list(times)
         self.exact = exact
-       
+
     def __str__(self):
         ret = []
         ret += [[self.n, self.table.shape[0]]]
@@ -169,12 +177,12 @@ class LookupTable(object):
 
         ret += [rhos_to_string(self.table.columns).split()]
 
-        ret += [[],[]]         
+        ret += [[],[]]
         for i,(config, row) in enumerate(self.table.iterrows(),start=1):
             ret += [[i,"#",config,":"] + list(row)]
 
         return "\n".join([" ".join(map(str,x)) for x in ret])
-        
+
 def epochTimesToIntervalLengths(epochTimes):
     if len(epochTimes) == 0:
         return []
@@ -182,14 +190,14 @@ def epochTimesToIntervalLengths(epochTimes):
         raise IOError("Your first epoch time point should not be zero!")
     epochLengths = list(epochTimes)
     totalTime = 0.
-    for i in xrange(0, len(epochLengths)):
+    for i in range(0, len(epochLengths)):
         epochLengths[i] = epochLengths[i] - totalTime
         totalTime += epochLengths[i]
     return epochLengths
 
 def rhos_to_string(rhos):
     rhos = numpy.array(rhos)
-    if rhos[0] == 0 and numpy.allclose(rhos[1:] - rhos[:-1], rhos[-1] / float(len(rhos)-1), atol=0):
+    if rhos[0] == 0 and numpy.allclose(rhos[1:] - rhos[:-1], old_div(rhos[-1], float(len(rhos)-1)), atol=0):
         rho_line = [len(rhos), rhos[-1]]
     else:
         #ret += [["rho"] + list(rhos)]
@@ -210,14 +218,14 @@ def rhos_from_string(rho_string):
     otherwise, the rho_string should be <rho_1>,<step_size_1>,<rho_2>... and return [rho_1, rho_1 + step_size_1, ..., rho_2,...]
     note that this implies that if rho_string is just <rho>, return [rho].
     """
-    
+
     rho_args = rho_string.split(",")
 
     if len(rho_args) == 2:
         n,R = int(rho_args[0]), float(rho_args[1])
         return list(numpy.arange(n, dtype=float) / float(n-1) * R)
-    
-    rhos = [float(rho_args[0])]    
+
+    rhos = [float(rho_args[0])]
     arg_idx = 1
     while(arg_idx < len(rho_args)):
         assert arg_idx + 1 < len(rho_args)
@@ -229,7 +237,7 @@ def rhos_from_string(rho_string):
             cur_rho += step_size
             rhos.append(cur_rho)
         if abs(cur_rho - endingRho) > 1e-13:
-            print cur_rho
-            print endingRho
+            print(cur_rho)
+            print(endingRho)
             raise IOError("the Rhos you input are not so nice (stepsize should divide difference in rhos)")
     return rhos

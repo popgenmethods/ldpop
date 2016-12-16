@@ -3,8 +3,10 @@ Created on Jan 23, 2015
 
 @author: jkamm
 '''
-from compute_stationary import stationary
-from moran_augmented import AbstractMoranStates, c_haps, makeAllConfigs, build_mut_rates, build_copy_rates, get_rates, subtract_rowsum_on_diag
+from __future__ import absolute_import
+from builtins import range
+from .compute_stationary import stationary
+from .moran_augmented import AbstractMoranStates, c_haps, makeAllConfigs, build_mut_rates, build_copy_rates, get_rates, subtract_rowsum_on_diag
 
 import logging, time, numpy, scipy
 from scipy import sparse
@@ -26,8 +28,8 @@ class MoranStatesFinite(AbstractMoranStates):
         
         # make all haplotypes
         self.hapList = []
-        for allele1 in xrange(2):
-            for allele2 in xrange(2):
+        for allele1 in range(2):
+            for allele2 in range(2):
                 self.hapList.append((allele1,allele2))
 
 

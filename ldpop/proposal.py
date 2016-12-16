@@ -1,7 +1,15 @@
-from lookup_table import epochTimesToIntervalLengths, rhos_to_string
-from compute_likelihoods import folded_likelihoods
-from moran_finite import MoranStatesFinite
-from moran_augmented import MoranRates
+from __future__ import division
+from __future__ import absolute_import
+from builtins import zip
+from builtins import map
+from builtins import str
+from builtins import range
+from builtins import object
+from past.utils import old_div
+from .lookup_table import epochTimesToIntervalLengths, rhos_to_string
+from .compute_likelihoods import folded_likelihoods
+from .moran_finite import MoranStatesFinite
+from .moran_augmented import MoranRates
 
 from multiprocessing import Pool
 import math,pandas,logging,time
@@ -59,14 +67,14 @@ class ISProposal(object):
         
         executor = Pool(processes)
         
-        likelihoodDictList = map(states.ordered_log_likelihoods,
-                                 executor.map(ordered_wrapper, [(moranRates, rho, theta, pop_sizes, epochLengths, numTimePointsPerEpoch) for rho in rhos]))
+        likelihoodDictList = list(map(states.ordered_log_likelihoods,
+                                 executor.map(ordered_wrapper, [(moranRates, rho, theta, pop_sizes, epochLengths, numTimePointsPerEpoch) for rho in rhos])))
         executor.close()
         executor.join()
                                  
         data = {}
         for rho, likelihoodDict in zip(rhos,likelihoodDictList):
-            timeList = likelihoodDict.keys()
+            timeList = list(likelihoodDict.keys())
             timeList.sort()
             index, rows = [],[]
             for config in sorted(likelihoodDict[0.0].keys()):
@@ -88,17 +96,17 @@ class ISProposal(object):
     def __str__(self):
         ret = []
         #header
-        ret += [["numHaps", int(self.num_haps/2)]]
+        ret += [["numHaps", int(old_div(self.num_haps,2))]]
         ret += [["theta", self.theta]]
         ret += [["popSizes", ",".join(map(str,self.pop_sizes))]]
         ret += [["epochTimes", ",".join(map(str,self.times))]]
-        ret += [["rhos", rhos_to_string(self.panel.keys())]]
+        ret += [["rhos", rhos_to_string(list(self.panel.keys()))]]
         ret += [["%"]]  #delimiter
         # Iterate over each config x timepoints table for a given rho, then print.
-        for rho, data_frame in self.panel.iteritems():
+        for rho in self.panel.keys():
             data_frame = self.panel[rho]
             ret += [["rho", rho]]
-            ret += [["config"," ".join(map(str,data_frame.keys()))]]
+            ret += [["config"," ".join(map(str,list(data_frame.keys())))]]
             for (config, row) in data_frame.iterrows():
                 ret += [[config,":"] + list(row)]
             ret += [["$"]]  #delimiter

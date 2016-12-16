@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-
+from __future__ import print_function
 from ldpop import LookupTable, rhos_from_string
 import argparse, logging
 
@@ -12,7 +12,7 @@ if __name__ == "__main__":
     parser.add_argument("-t", type=str, metavar="t1,...,tD", help="times of size changes from present backwards. Must be increasing positive reals.")
     parser.add_argument("--approx", action="store_true", help="use finite moran model. A reasonable approximation that is much faster than the exact formula. Accuracy of the approximation can be improved by taking n larger than needed, and using ldhat/lkgen.c to subsample. (Converges to the 'exact' diffusion as n->infty)")
     parser.add_argument("--cores", type=int, default=1, help="Number of parallel processes to use.")
-    parser.add_argument("--log", type=str, metavar="logfile", help="Log extra info to logfile. If logfile='.', logs to STDERR.")    
+    parser.add_argument("--log", type=str, metavar="logfile", help="Log extra info to logfile. If logfile='.', logs to STDERR.")
 
     args = parser.parse_args()
 
@@ -20,10 +20,10 @@ if __name__ == "__main__":
         logging.basicConfig(level=logging.INFO)
     elif args.log is not None:
         logging.basicConfig(filename=args.log, level=logging.INFO)
-       
+
     exact = not args.approx
     numCores = args.cores
-    
+
     rhos = rhos_from_string(args.rh)
 
     popSizes, times = args.s, args.t
@@ -32,10 +32,9 @@ if __name__ == "__main__":
         popSizes = [1.]
         times = []
     else:
-        popSizes = map(float, popSizes.split(","))
-        times = map(float, times.split(","))
+        popSizes = [float(_) for _ in popSizes.split(",")]
+        times = [float(_) for _ in  times.split(",")]
 
-    assert len(popSizes) == len(times)+1        
-    
-    print LookupTable(args.n, args.th, rhos, popSizes, times, exact, numCores)
+    assert len(popSizes) == len(times)+1
 
+    print(LookupTable(args.n, args.th, rhos, popSizes, times, exact, numCores))
