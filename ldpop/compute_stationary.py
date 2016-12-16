@@ -1,6 +1,5 @@
 from __future__ import division
 from builtins import range
-from past.utils import old_div
 
 import numpy, sys, logging, math, time
 from numpy import zeros, array
@@ -28,7 +27,7 @@ def stationary1d_tridiagonal(Q):
     ret = numpy.array(ret)
     ret = ret - numpy.max(ret)
     ret = numpy.exp(ret)
-    ret = old_div(ret, numpy.sum(ret))
+    ret = ret / numpy.sum(ret)
 #     logging.info("Done!")
     return ret
 
@@ -41,7 +40,7 @@ def stationary(Q, init=None, norm_order=1, epsilon=1e-8):
     # Compute a suitable stochastic matrix by means of uniformization
 #     l = min(Q.values())*1.001  # avoid periodicity, see the book of Bolch et al.
     l = Q.min() * 1.001
-    P = sp.eye(size, size) - old_div(Q,l)
+    P = sp.eye(size, size) - Q/l
     # compute Pi
     P =  P.tocsr()
 #     pi = zeros(size);  pi1 = zeros(size)
@@ -51,7 +50,7 @@ def stationary(Q, init=None, norm_order=1, epsilon=1e-8):
         assertValidProbs(init)
         pi = init
     else:
-        pi = array([old_div(1, float(size)) for i in range(size)])
+        pi = array([1 / float(size) for i in range(size)])
     n = float("inf")
     
     i = 0;
@@ -66,7 +65,7 @@ def stationary(Q, init=None, norm_order=1, epsilon=1e-8):
         if numpy.all((pi == 0.) == (pi1 == 0.)):
 #             print str(pi)
 #             print str(pi1)
-            n = norm(numpy.log(old_div(pi[not_zero], pi1[not_zero])),norm_order); i += 1
+            n = norm(numpy.log(pi[not_zero] / pi1[not_zero]),norm_order); i += 1
         else:
             n = float("inf")
 #         n = norm(pi - pi1,1); i += 1

@@ -3,7 +3,6 @@ from future import standard_library
 standard_library.install_aliases()
 import pytest
 import ldpop, sys, re
-import pickle as pickle
 import numpy as np
 
 

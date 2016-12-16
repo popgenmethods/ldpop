@@ -5,7 +5,6 @@ from builtins import zip
 from builtins import map
 from builtins import range
 from builtins import object
-from past.utils import old_div
 from .compute_likelihoods import folded_likelihoods, NumericalError
 from .moran_augmented import MoranStatesAugmented, MoranRates
 from .moran_finite import MoranStatesFinite
@@ -139,7 +138,7 @@ class LookupTable(object):
             rhos = [0.0] + rhos
 
         #we want this to truncate, I guess:
-        halfn = old_div(int(n), 2)
+        halfn = int(n) // 2
         #nifty formula courtesy of LD hat.  Note we do want this truncation division, or whatever it's called
         numConfigs = 1 + halfn + halfn * (halfn - 1) * (halfn + 4 ) / 6 + (halfn - 1) * (halfn + 2) / 2
 
@@ -197,7 +196,7 @@ def epochTimesToIntervalLengths(epochTimes):
 
 def rhos_to_string(rhos):
     rhos = numpy.array(rhos)
-    if rhos[0] == 0 and numpy.allclose(rhos[1:] - rhos[:-1], old_div(rhos[-1], float(len(rhos)-1)), atol=0):
+    if rhos[0] == 0 and numpy.allclose(rhos[1:] - rhos[:-1], rhos[-1] / float(len(rhos)-1), atol=0):
         rho_line = [len(rhos), rhos[-1]]
     else:
         #ret += [["rho"] + list(rhos)]

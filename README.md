@@ -12,7 +12,7 @@ LDpop also provides utilities for efficient posterior sampling of 2-locus ARGs.
 ## Installation and Dependencies
 
 Prerequisites:
-* Scientific distribution of Python 2.7, e.g. [Anaconda](http://continuum.io/downloads), [Enthought Canopy](https://www.enthought.com/products/canopy/)
+* Scientific distribution of Python 2.7 or 3, e.g. [Anaconda](http://continuum.io/downloads), [Enthought Canopy](https://www.enthought.com/products/canopy/)
   * Alternatively, custom installation of pip, the SciPy stack
 * Optional: Java 8
   * Not required for computing lookup tables.

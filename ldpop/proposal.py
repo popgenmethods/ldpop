@@ -5,7 +5,6 @@ from builtins import map
 from builtins import str
 from builtins import range
 from builtins import object
-from past.utils import old_div
 from .lookup_table import epochTimesToIntervalLengths, rhos_to_string
 from .compute_likelihoods import folded_likelihoods
 from .moran_finite import MoranStatesFinite
@@ -96,7 +95,7 @@ class ISProposal(object):
     def __str__(self):
         ret = []
         #header
-        ret += [["numHaps", int(old_div(self.num_haps,2))]]
+        ret += [["numHaps", int(self.num_haps/2)]]
         ret += [["theta", self.theta]]
         ret += [["popSizes", ",".join(map(str,self.pop_sizes))]]
         ret += [["epochTimes", ",".join(map(str,self.times))]]

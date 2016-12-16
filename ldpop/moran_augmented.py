@@ -9,7 +9,6 @@ from builtins import map
 from builtins import zip
 from builtins import range
 from builtins import object
-from past.utils import old_div
 from .compute_stationary import stationary, stationary1d_tridiagonal, assertValidProbs
 
 import logging, time, numpy, math, scipy, scipy.misc, scipy.special
@@ -35,8 +34,8 @@ class MoranRates(object):
         if not self.exact:
             return numpy.array([0.0] * self.n + [1.0])
         n=self.n
-        coalRate = old_div(1., popSize)
-        recomRate = old_div(float(rho), 2.)
+        coalRate = 1. / popSize
+        recomRate = float(rho) / 2.
 
         if rho == 0.0:
             return numpy.array([0.0] * self.n + [1.0])
@@ -54,9 +53,9 @@ class MoranRates(object):
     def getRates(self, popSize, theta, rho):
         #return MoranRates(states=self, rho=rho, popSize=popSize, theta=theta).rates
         start = time.time()
-        recomRate = old_div(float(rho), 2.)
-        mutRate = old_div(float(theta), 2.)
-        coalRate = old_div(1., float(popSize))
+        recomRate = float(rho) / 2.
+        mutRate = float(theta) / 2.
+        coalRate = 1. / float(popSize)
         #self.rates = nonRecomRates.rates + recomRate * get_recom_rates(self.n)
         ret = recomRate * self.unscaled_recom_rates + mutRate * self.unscaled_mut_rates + coalRate * self.unscaled_coal_rates
         end = time.time()
@@ -80,7 +79,7 @@ def makeAllConfigs(hapList, n):
     for hapIdx,hap in enumerate(hapList):
         newConfigList = []
         for config in tmpConfigList:
-            numHaps = sum([v for k,v in list(config.items())])
+            numHaps = sum([v for k,v in config.items()])
             assert numHaps <= n
             if hapIdx == len(hapList)-1:
                 next_count = [n-numHaps]
@@ -95,8 +94,8 @@ def makeAllConfigs(hapList, n):
     return tmpConfigList
 
 def one_locus_probs(popSize, theta, n):
-    coalRate = old_div(1., popSize)
-    mutRate = old_div(float(theta), 2.)
+    coalRate = 1. / popSize
+    mutRate = float(theta) / 2.
     
     numOnesRates = sparse.dok_matrix((n+1,n+1))
     for i in range(n+1):
@@ -197,7 +196,7 @@ class AbstractMoranStates(object):
         self.numC = self.folded_config_array[:,0,0] + self.folded_config_array[:,0,1] + self.folded_config_array[:,1,0] + self.folded_config_array[:,1,1]
         
         symm_mat = sparse.dok_matrix((len(allIdx_to_foldedIdx), self.folded_config_array.shape[0]))
-        symm_mat.update(dict(list(zip(enumerate(allIdx_to_foldedIdx), [1]*len(folded_list)))))
+        symm_mat.update(dict(zip(enumerate(allIdx_to_foldedIdx), [1]*len(folded_list))))
         symm_mat = symm_mat.tocsc()
         
         antisymm_mat = symm_mat.transpose().tocsr(copy=True)
@@ -229,7 +228,7 @@ class AbstractMoranStates(object):
                     liks += scipy.special.gammaln(full_confs[:,i,j]+1)
 
             full_confs = [tuple(sorted(((i,j),cnf[i,j]) for i in (0,1) for j in (0,1))) for cnf in full_confs]
-            return dict(list(zip(full_confs, liks)))
+            return dict(zip(full_confs, liks))
 
    
 class MoranStatesAugmented(AbstractMoranStates):
