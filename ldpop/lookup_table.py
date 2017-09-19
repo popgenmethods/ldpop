@@ -46,6 +46,8 @@ def get_states(n, exact):
     else:
         return MoranStatesFinite(n)
 
+def getColumnHelper(args):
+    return getColumn(*args)
 
 def getColumn(moranRates, rho, theta, popSizes, timeLens, init):
     try:
@@ -67,18 +69,16 @@ def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):
 
     # compute initial distributions and likelihoods
     prevInit = states.getUnlinkedStationary(popSize=popSizes[-1], theta=theta)
-    ret = []
+    inits = []
     #for rho, rates in reversed(zip(rhoGrid, lastRatesList)):
     for rho in reversed(rhoGrid):
         rates = moranRates.getRates(rho=rho, popSize=popSizes[-1], theta=theta)
         prevInit = stationary(Q=rates, init=prevInit, norm_order=float('inf'), epsilon=1e-2)
-        ret.append(executor.apply_async(getColumn,
-                                        (moranRates, rho, theta, popSizes, timeLens, prevInit)))
-
+        inits.append(prevInit)
+    ret = executor.map(getColumnHelper, [(moranRates, rho, theta, popSizes, timeLens, prevInit) for rho,prevInit in zip(reversed(rhoGrid),inits)])
     logging.info("Cleaning up results...")
-    ret = [states.ordered_log_likelihoods(result.get()) for result in ret]
+    ret = [states.ordered_log_likelihoods(result) for result in ret]
     executor.close()
-    executor.join()
 
     return [(rho, lik) for rho,lik in zip(rhoGrid, reversed(ret))]
 
