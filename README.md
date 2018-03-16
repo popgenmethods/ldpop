@@ -44,4 +44,4 @@ Also, see the [examples](example/).
 
 ## Reference
 
-Kamm, J.A.\*, Spence, J.P.\*, Chan, J., and Song, Y.S. Two-Locus Likelihoods under Variable Population Size and Fine-Scale Recombination Rate Estimation. *Genetics*, 2016, in press. http://www.genetics.org/content/early/2016/05/09/genetics.115.184820
+Kamm, J.A.\*, Spence, J.P.\*, Chan, J., and Song, Y.S. Two-Locus Likelihoods under Variable Population Size and Fine-Scale Recombination Rate Estimation. *Genetics*, 2016. http://www.genetics.org/content/203/3/1381
