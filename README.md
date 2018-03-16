@@ -5,15 +5,14 @@ LDpop is a program for computing 2-locus likelihoods under the coalescent with r
 LDpop produces lookup tables that can be used by other programs to estimate recombination maps. Other programs that can use the output of LDpop include:
 * [LDhat](https://github.com/auton1/LDhat)
 * [LDhot](https://github.com/auton1/LDhot)
-* A modified [LDhelmet](https://sourceforge.net/projects/ldhelmet/), to be released soon (the original LDhelmet computes its lookup table internally).
+* [LDhelmet](https://sourceforge.net/projects/ldhelmet/)
 
 LDpop also provides utilities for efficient posterior sampling of 2-locus ARGs.
 
 ## Installation and Dependencies
 
 Prerequisites:
-* Scientific distribution of Python 2.7 or 3, e.g. [Anaconda](http://continuum.io/downloads), [Enthought Canopy](https://www.enthought.com/products/canopy/)
-  * Alternatively, custom installation of pip, the SciPy stack
+* Python 2.7, 3.5, or 3.6
 * Optional: Java 8
   * Not required for computing lookup tables.
   * Required for posterior sampling of 2-locus ARGs.
