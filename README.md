@@ -40,13 +40,8 @@ Also, see the [examples](example/).
 
 ## Authors
 
-[John Kamm](mailto:jkamm@stat.berkeley.edu), Jeffrey Spence, Jeffrey Chan, Yun S. Song
+[Jack Kamm](mailto:jkamm@stat.berkeley.edu), Jeffrey Spence, Jeffrey Chan, Yun S. Song
 
 ## Reference
 
 Kamm, J.A.\*, Spence, J.P.\*, Chan, J., and Song, Y.S. Two-Locus Likelihoods under Variable Population Size and Fine-Scale Recombination Rate Estimation. *Genetics*, 2016, in press. http://www.genetics.org/content/early/2016/05/09/genetics.115.184820
-
-
-## License
-
-LDpop is free software under conditions of GNU GPL v3.
