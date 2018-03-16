@@ -196,7 +196,8 @@ class AbstractMoranStates(object):
         self.numC = self.folded_config_array[:,0,0] + self.folded_config_array[:,0,1] + self.folded_config_array[:,1,0] + self.folded_config_array[:,1,1]
         
         symm_mat = sparse.dok_matrix((len(allIdx_to_foldedIdx), self.folded_config_array.shape[0]))
-        symm_mat.update(dict(zip(enumerate(allIdx_to_foldedIdx), [1]*len(folded_list))))
+        for i, j in enumerate(allIdx_to_foldedIdx):
+            symm_mat[i, j] = 1
         symm_mat = symm_mat.tocsc()
         
         antisymm_mat = symm_mat.transpose().tocsr(copy=True)
