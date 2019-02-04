@@ -116,7 +116,8 @@ class ISProposal(object):
         
 def ordered_wrapper(args_list):
     moranRates, rho, theta, popSizes, epochLengths, numTimePointsPerEpoch = args_list
-    return folded_likelihoods(moranRates, rho, theta, popSizes, epochLengths, gridPointsPerEpoch=numTimePointsPerEpoch)
+    return folded_likelihoods(moranRates, rho, theta, popSizes, epochLengths,
+                              gridPointsPerEpoch=numTimePointsPerEpoch)[0]
 # Prints grid of the form
 # config:    L@t1    L@t_2    L@time3...
 # 

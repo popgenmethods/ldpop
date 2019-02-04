@@ -56,7 +56,8 @@ def getColumn(moranRates, rho, theta, popSizes, timeLens, init):
         print(rho)
         print(err)
 
-def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):
+def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores,
+                       store_stationary=None, load_stationary=None):
     rhoGrid = list(rhoGrid)
     assert rhoGrid == sorted(rhoGrid)
 
@@ -70,14 +71,22 @@ def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores):
     # compute initial distributions and likelihoods
     prevInit = states.getUnlinkedStationary(popSize=popSizes[-1], theta=theta)
     inits = []
-    #for rho, rates in reversed(zip(rhoGrid, lastRatesList)):
-    for rho in reversed(rhoGrid):
-        rates = moranRates.getRates(rho=rho, popSize=popSizes[-1], theta=theta)
-        prevInit = stationary(Q=rates, init=prevInit, norm_order=float('inf'), epsilon=1e-2)
-        inits.append(prevInit)
+
+    if load_stationary:
+        stationary_dists = numpy.load(load_stationary)
+        for stationary_dist in stationary_dists:
+            inits.append(stationary_dist)
+    else:
+        for rho in reversed(rhoGrid):
+            rates = moranRates.getRates(rho=rho, popSize=popSizes[-1], theta=theta)
+            prevInit = stationary(Q=rates, init=prevInit, norm_order=float('inf'), epsilon=1e-2)
+            inits.append(prevInit)
     ret = executor.map(getColumnHelper, [(moranRates, rho, theta, popSizes, timeLens, prevInit) for rho,prevInit in zip(reversed(rhoGrid),inits)])
     logging.info("Cleaning up results...")
-    ret = [states.ordered_log_likelihoods(result) for result in ret]
+    if store_stationary:
+        full_inits = numpy.array([result[1] for result in ret])
+        numpy.save(store_stationary, full_inits)
+    ret = [states.ordered_log_likelihoods(result[0]) for result in ret]
     executor.close()
 
     return [(rho, lik) for rho,lik in zip(rhoGrid, reversed(ret))]
@@ -116,7 +125,8 @@ class LookupTable(object):
         LookupTable(...,processes)
     to specify the number of parallel processes to use.
     """
-    def __init__(self, n, theta, rhos, pop_sizes=[1], times=[], exact=True, processes=1):
+    def __init__(self, n, theta, rhos, pop_sizes=[1], times=[], exact=True,
+                 processes=1, store_stationary=None, load_stationary=None):
         assert list(rhos) == list(sorted(rhos)) and len(rhos) == len(set(rhos)), "rhos must be sorted and unique"
         assert len(pop_sizes) == len(times)+1, "Must have exactly one more pop_sizes than times"
 
@@ -129,7 +139,9 @@ class LookupTable(object):
         # only use exact to compute rho > 0
         if exact and minRho == 0.0:
             rhos = rhos[1:]
-        results = computeLikelihoods(n, exact, pop_sizes, theta, timeLens, rhos, processes)
+        results = computeLikelihoods(n, exact, pop_sizes, theta, timeLens,
+                                     rhos, processes, store_stationary,
+                                     load_stationary)
 
         # use approx to compute rho == 0.0, because exact==approx and approx is faster
         if exact and minRho == 0.0:
