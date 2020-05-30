@@ -3,6 +3,7 @@
 LDpop is a program for computing 2-locus likelihoods under the coalescent with recombination. Unlike previous methods, LDpop can correctly account for variable (but piecewise-constant) population size history.
 
 LDpop produces lookup tables that can be used by other programs to estimate recombination maps. Other programs that can use the output of LDpop include:
+* [pyrho](https://github.com/popgenmethods/pyrho)
 * [LDhat](https://github.com/auton1/LDhat)
 * [LDhot](https://github.com/auton1/LDhot)
 * [LDhelmet](https://sourceforge.net/projects/ldhelmet/)
