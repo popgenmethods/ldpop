@@ -191,23 +191,23 @@ class LookupTable(object):
         index, rows = [], []
         # make all these configs then print them out
         for i in range(1, halfn + 1):
-                for j in range(1, i + 1):
-                    for k in range(j, -1, -1):
-                        hapMult11 = k
-                        hapMult10 = j - k
-                        hapMult01 = i - k
-                        hapMult00 = n - i - j + k
+            for j in range(1, i + 1):
+                for k in range(j, -1, -1):
+                    hapMult11 = k
+                    hapMult10 = j - k
+                    hapMult01 = i - k
+                    hapMult00 = n - i - j + k
 
-                        index += ['%d %d %d %d' % (hapMult00,
-                                                   hapMult01,
-                                                   hapMult10,
-                                                   hapMult11)]
-                        rows += [getRow(hapMult00,
-                                        hapMult01,
-                                        hapMult10,
-                                        hapMult11,
-                                        columns,
-                                        rhos)]
+                    index.append('%d %d %d %d' % (hapMult00,
+                                                  hapMult01,
+                                                  hapMult10,
+                                                  hapMult11))
+                    rows.append(getRow(hapMult00,
+                                       hapMult01,
+                                       hapMult10,
+                                       hapMult11,
+                                       columns,
+                                       rhos))
         self.table = pandas.DataFrame(rows, index=index, columns=rhos)
 
         assert self.table.shape[0] == numConfigs
@@ -221,15 +221,15 @@ class LookupTable(object):
         self.exact = exact
 
     def __str__(self):
-        ret = []
-        ret += [[self.n, self.table.shape[0]]]
-        ret += [[1, self.theta]]
+        ret = [[self.n, self.table.shape[0]]]
+        ret.append([1, self.theta])
 
-        ret += [rhos_to_string(self.table.columns).split()]
+        ret.append(rhos_to_string(self.table.columns).split())
 
-        ret += [[], []]
+        ret.append([])
+        ret.append([])
         for i, (config, row) in enumerate(self.table.iterrows(), start=1):
-            ret += [[i, '#', config, ':'] + list(row)]
+            ret.append([i, '#', config, ':'] + list(row))
 
         return '\n'.join([' '.join(map(str, x)) for x in ret])
 
