@@ -107,7 +107,7 @@ def folded_likelihoods(moranRates, rho, theta, popSizes, timeLens,
 
             likelihoods = currLik
 
-    assert abs(currTime) < 1e-15 * numpy.max(1.0, numpy.max(timeLens)), str(currTime)
+    assert abs(currTime) < 1e-15 * numpy.max([1.0, numpy.max(timeLens)]), str(currTime)
 
     ret[0.0] = likelihoods
 
