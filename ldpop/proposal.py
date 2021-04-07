@@ -81,16 +81,16 @@ class ISProposal(object):
                                            for rho in rhos])))
         executor.close()
         executor.join()
-
+        indexer = states.ordered_indexes()
         data = {}
         for rho, likelihoodDict in zip(rhos, likelihoodDictList):
             timeList = list(likelihoodDict.keys())
             timeList.sort()
             index, rows = [], []
-            for config in sorted(likelihoodDict[0.0].keys()):
+            for config in sorted(indexer.keys()):
                 config_dict = dict(config)
                 index += [' '.join([str(config_dict[hap]) for hap in haps])]
-                rows += [[math.exp(likelihoodDict[disc_time][config])
+                rows += [[math.exp(likelihoodDict[disc_time][indexer[config]])
                           for disc_time in timeList]]
             data[rho] = pandas.DataFrame(rows, index=index, columns=timeList)
 

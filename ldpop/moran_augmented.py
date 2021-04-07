@@ -238,6 +238,14 @@ class AbstractMoranStates(object):
         logging.info('%f seconds to build symmetry matrices'
                      % (time.time() - start))
 
+    def ordered_indexes(self):
+        all_nC = self.config_array[:, :-1, :-1].sum(axis=(1, 2))
+        full_confs = self.config_array[:, :-1, :-1][all_nC == self.n, :, :]
+        full_confs = [tuple(sorted(((i, j), cnf[i, j])
+                                   for i in (0, 1) for j in (0, 1)))
+                      for cnf in full_confs]
+        return dict(zip(full_confs, numpy.arange(len(full_confs))))
+
     def ordered_log_likelihoods(self, liks):
         try:
             return {time: self.ordered_log_likelihoods(l)
@@ -256,10 +264,7 @@ class AbstractMoranStates(object):
                 for j in (0, 1):
                     liks += scipy.special.gammaln(full_confs[:, i, j]+1)
 
-            full_confs = [tuple(sorted(((i, j), cnf[i, j])
-                                       for i in (0, 1) for j in (0, 1)))
-                          for cnf in full_confs]
-            return dict(zip(full_confs, liks))
+            return liks
 
 
 class MoranStatesAugmented(AbstractMoranStates):

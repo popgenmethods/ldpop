@@ -33,11 +33,11 @@ def getKey(num00, num01, num10, num11):
 
 # columns has the columns of the table
 # plus possibly extraneous things, but we just pull out what we want
-def getRow(num00, num01, num10, num11, columns, rhos):
+def getRow(num00, num01, num10, num11, columns, rhos, indexer):
     toReturn = []
     for rho in rhos:
         key = getKey(num00, num01, num10, num11)
-        toReturn.append(columns[rho][key])
+        toReturn.append(columns[rho][indexer[key]])
     return toReturn
 
 
@@ -106,7 +106,8 @@ def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores,
     ret = [states.ordered_log_likelihoods(result[0]) for result in ret]
     executor.close()
 
-    return [(rho, lik) for rho, lik in zip(rhoGrid, reversed(ret))]
+    return ([(rho, lik) for rho, lik in zip(rhoGrid, reversed(ret))],
+            states.ordered_indexes())
 
 
 class LookupTable(object):
@@ -165,21 +166,22 @@ class LookupTable(object):
         # only use exact to compute rho > 0
         if exact and minRho == 0.0:
             rhos = rhos[1:]
-        results = computeLikelihoods(n, exact, pop_sizes, theta, timeLens,
-                                     rhos, processes, store_stationary,
-                                     load_stationary)
-
+        (results,
+         indexer) = computeLikelihoods(n, exact, pop_sizes, theta, timeLens,
+                                       rhos, processes, store_stationary,
+                                       load_stationary)
         # use approx to compute rho == 0.0
         # because exact==approx and approx is faster
         if exact and minRho == 0.0:
             logging.info('Computing column for rho=0')
-            results = computeLikelihoods(n,
-                                         False,
-                                         pop_sizes,
-                                         theta,
-                                         timeLens,
-                                         [0.0],
-                                         processes) + results
+            zero_result, _ = computeLikelihoods(n,
+                                                False,
+                                                pop_sizes,
+                                                theta,
+                                                timeLens,
+                                                [0.0],
+                                                processes)
+            results += zero_result
             rhos = [0.0] + rhos
 
         halfn = int(n) // 2
@@ -207,7 +209,8 @@ class LookupTable(object):
                                        hapMult10,
                                        hapMult11,
                                        columns,
-                                       rhos))
+                                       rhos,
+                                       indexer))
         self.table = pandas.DataFrame(rows, index=index, columns=rhos)
 
         assert self.table.shape[0] == numConfigs
