@@ -181,7 +181,7 @@ class LookupTable(object):
                                                 timeLens,
                                                 [0.0],
                                                 processes)
-            results += zero_result
+            results = zero_result + results
             rhos = [0.0] + rhos
 
         halfn = int(n) // 2
