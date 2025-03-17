@@ -52,21 +52,24 @@ def getColumnHelper(args):
     return getColumn(*args)
 
 
-def getColumn(moranRates, rho, theta, popSizes, timeLens, init):
+def getColumn(moranRates, rho, theta, popSizes, timeLens, init,
+              stationaryNormOrder):
     try:
         return folded_likelihoods(moranRates,
                                   rho,
                                   theta,
                                   popSizes,
                                   timeLens,
-                                  lastEpochInit=init)
+                                  lastEpochInit=init,
+                                  stationaryNormOrder=stationaryNormOrder)
     except NumericalError as err:
         print(rho)
         print(err)
 
 
 def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores,
-                       store_stationary=None, load_stationary=None):
+                       store_stationary=None, load_stationary=None,
+                       stationaryNormOrder=1):
     rhoGrid = list(rhoGrid)
     assert rhoGrid == sorted(rhoGrid)
 
@@ -97,7 +100,8 @@ def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores,
                                   epsilon=1e-2)
             inits.append(prevInit)
     ret = executor.map(getColumnHelper,
-                       [(moranRates, rho, theta, popSizes, timeLens, prevInit)
+                       [(moranRates, rho, theta, popSizes, timeLens, prevInit,
+                        stationaryNormOrder)
                         for rho, prevInit in zip(reversed(rhoGrid), inits)])
     logging.info('Cleaning up results...')
     if store_stationary:
@@ -114,7 +118,9 @@ class LookupTable(object):
     '''
     Lookup table of 2-locus likelihoods. Construct with
         lookup_table = LookupTable(n, theta, rhos, [pop_sizes],
-                                   [times], [exact], [processes])
+                                   [times], [exact], [processes],
+                                   [store_stationary], [load_stationary],
+                                   [lax_stationary])
     (optional arguments in square bracket [])
 
     Printing
@@ -152,13 +158,16 @@ class LookupTable(object):
     to specify the number of parallel processes to use.
     '''
     def __init__(self, n, theta, rhos, pop_sizes=[1], times=[], exact=True,
-                 processes=1, store_stationary=None, load_stationary=None):
+                 processes=1, store_stationary=None, load_stationary=None,
+                 lax_stationary=False):
         assert (list(rhos) == list(sorted(rhos))
                 and len(rhos) == len(set(rhos))), 'rhos must be sorted, unique'
         assert len(pop_sizes) == len(times)+1
 
         timeLens = epochTimesToIntervalLengths(times)
         assert len(pop_sizes) == len(timeLens)+1
+
+        norm_order = float('inf') if lax_stationary else 1
 
         start = time.time()
         minRho = rhos[0]
@@ -169,7 +178,7 @@ class LookupTable(object):
         (results,
          indexer) = computeLikelihoods(n, exact, pop_sizes, theta, timeLens,
                                        rhos, processes, store_stationary,
-                                       load_stationary)
+                                       load_stationary, norm_order)
         # use approx to compute rho == 0.0
         # because exact==approx and approx is faster
         if exact and minRho == 0.0:
@@ -287,7 +296,7 @@ def rhos_from_string(rho_string):
 
     rhos = [float(rho_args[0])]
     arg_idx = 1
-    while(arg_idx < len(rho_args)):
+    while arg_idx < len(rho_args):
         assert arg_idx + 1 < len(rho_args)
         step_size = float(rho_args[arg_idx])
         endingRho = float(rho_args[arg_idx+1])
@@ -295,7 +304,7 @@ def rhos_from_string(rho_string):
         cur_rho = rhos[-1]
 
         # 1e-13 deals with the numeric issues
-        while(cur_rho < endingRho-1e-13):
+        while cur_rho < endingRho-1e-13:
             cur_rho += step_size
             rhos.append(cur_rho)
         if abs(cur_rho - endingRho) > 1e-13:

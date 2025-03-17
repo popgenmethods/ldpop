@@ -40,7 +40,8 @@ def assert_valid_likelihoods(likelihoods, pi_c, moranRates):
 
 
 def folded_likelihoods(moranRates, rho, theta, popSizes, timeLens,
-                       gridPointsPerEpoch=0, lastEpochInit=None):
+                       gridPointsPerEpoch=0, lastEpochInit=None,
+                       stationaryNormOrder=1):
     assert len(popSizes) == len(timeLens) + 1
     timeStart = time.time()
 
@@ -49,7 +50,8 @@ def folded_likelihoods(moranRates, rho, theta, popSizes, timeLens,
     not_zero = renormalize != 0.
 
     rates = moranRates.getRates(popSize=popSizes[-1], rho=rho, theta=theta)
-    init_stationary = stationary(Q=rates, init=lastEpochInit)
+    init_stationary = stationary(Q=rates, init=lastEpochInit,
+                                 norm_order=stationaryNormOrder)
     likelihoods = numpy.copy(init_stationary)
 
     assert_valid_likelihoods(likelihoods, pi_c, moranRates)
@@ -108,7 +110,9 @@ def folded_likelihoods(moranRates, rho, theta, popSizes, timeLens,
             likelihoods = currLik
 
     if len(timeLens) > 0:
-        assert abs(currTime) < 1e-15 * numpy.max([1.0, numpy.max(timeLens)]), str(currTime)
+        assert (
+            abs(currTime) < 1e-15 * numpy.max([1.0, numpy.max(timeLens)])
+        ), str(currTime)
 
     ret[0.0] = likelihoods
 
