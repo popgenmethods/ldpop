@@ -10,7 +10,7 @@ from .compute_likelihoods import folded_likelihoods
 from .moran_finite import MoranStatesFinite
 from .moran_augmented import MoranRates
 
-from multiprocessing import Pool
+from concurrent.futures import ProcessPoolExecutor
 import math
 import pandas
 import logging
@@ -72,15 +72,14 @@ class ISProposal(object):
         states = MoranStatesFinite(2*n)
         moranRates = MoranRates(states)
 
-        executor = Pool(processes)
-        likelihoodDictList = list(map(
-            states.ordered_log_likelihoods,
-            executor.map(ordered_wrapper, [(moranRates, rho, theta,
-                                            pop_sizes, epochLengths,
-                                            numTimePointsPerEpoch)
-                                           for rho in rhos])))
-        executor.close()
-        executor.join()
+        with ProcessPoolExecutor(processes) as executor:
+            likelihoodDictList = list(map(
+                states.ordered_log_likelihoods,
+                executor.map(ordered_wrapper, [(moranRates, rho, theta,
+                                                pop_sizes, epochLengths,
+                                                numTimePointsPerEpoch)
+                                               for rho in rhos])))
+
         indexer = states.ordered_indexes()
         data = {}
         for rho, likelihoodDict in zip(rhos, likelihoodDictList):
