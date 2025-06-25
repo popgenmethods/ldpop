@@ -10,7 +10,7 @@ from .moran_augmented import MoranStatesAugmented, MoranRates
 from .moran_finite import MoranStatesFinite
 from .compute_stationary import stationary
 
-from multiprocessing import Pool
+from concurrent.futures import ProcessPoolExecutor 
 import logging
 import time
 import pandas
@@ -75,40 +75,39 @@ def computeLikelihoods(n, exact, popSizes, theta, timeLens, rhoGrid, cores,
 
     # make the pool first to avoid copying large objects.
     # maxtasksperchild=1 to avoid memory issues
-    executor = Pool(cores, maxtasksperchild=1)
+    with ProcessPoolExecutor(cores, max_tasks_per_child=1) as executor:
 
-    # make the states and the rates
-    states = get_states(n, exact)
-    moranRates = MoranRates(states)
+        # make the states and the rates
+        states = get_states(n, exact)
+        moranRates = MoranRates(states)
 
-    # compute initial distributions and likelihoods
-    prevInit = states.getUnlinkedStationary(popSize=popSizes[-1], theta=theta)
-    inits = []
+        # compute initial distributions and likelihoods
+        prevInit = states.getUnlinkedStationary(popSize=popSizes[-1], theta=theta)
+        inits = []
 
-    if load_stationary:
-        stationary_dists = numpy.load(load_stationary)
-        for stationary_dist in stationary_dists:
-            inits.append(stationary_dist)
-    else:
-        for rho in reversed(rhoGrid):
-            rates = moranRates.getRates(rho=rho,
-                                        popSize=popSizes[-1],
-                                        theta=theta)
-            prevInit = stationary(Q=rates,
-                                  init=prevInit,
-                                  norm_order=float('inf'),
-                                  epsilon=1e-2)
-            inits.append(prevInit)
-    ret = executor.map(getColumnHelper,
-                       [(moranRates, rho, theta, popSizes, timeLens, prevInit,
-                        stationaryNormOrder)
-                        for rho, prevInit in zip(reversed(rhoGrid), inits)])
-    logging.info('Cleaning up results...')
-    if store_stationary:
-        full_inits = numpy.array([result[1] for result in ret])
-        numpy.save(store_stationary, full_inits)
-    ret = [states.ordered_log_likelihoods(result[0]) for result in ret]
-    executor.close()
+        if load_stationary:
+            stationary_dists = numpy.load(load_stationary)
+            for stationary_dist in stationary_dists:
+                inits.append(stationary_dist)
+        else:
+            for rho in reversed(rhoGrid):
+                rates = moranRates.getRates(rho=rho,
+                                            popSize=popSizes[-1],
+                                            theta=theta)
+                prevInit = stationary(Q=rates,
+                                      init=prevInit,
+                                      norm_order=float('inf'),
+                                      epsilon=1e-2)
+                inits.append(prevInit)
+        ret = executor.map(getColumnHelper,
+                           [(moranRates, rho, theta, popSizes, timeLens, prevInit,
+                            stationaryNormOrder)
+                            for rho, prevInit in zip(reversed(rhoGrid), inits)])
+        logging.info('Cleaning up results...')
+        if store_stationary:
+            full_inits = numpy.array([result[1] for result in ret])
+            numpy.save(store_stationary, full_inits)
+        ret = [states.ordered_log_likelihoods(result[0]) for result in ret]
 
     return ([(rho, lik) for rho, lik in zip(rhoGrid, reversed(ret))],
             states.ordered_indexes())
