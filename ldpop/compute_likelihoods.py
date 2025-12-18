@@ -42,6 +42,8 @@ def assert_valid_likelihoods(likelihoods, pi_c, moranRates):
 def folded_likelihoods(moranRates, rho, theta, popSizes, timeLens,
                        gridPointsPerEpoch=0, lastEpochInit=None,
                        stationaryNormOrder=1):
+
+    numpy.random.seed(42)
     assert len(popSizes) == len(timeLens) + 1
     timeStart = time.time()
 
